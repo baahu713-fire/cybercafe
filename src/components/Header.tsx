@@ -34,7 +34,7 @@ export default function Header() {
       <div className="container mx-auto px-4 flex justify-between items-center h-16">
         <Link href="/" className="flex items-center gap-2 text-2xl font-bold font-headline text-primary">
           <UtensilsCrossed className="h-7 w-7" />
-          <span>OrderFlow</span>
+          <span>CyberCafe</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           <NavLink href="/">Menu</NavLink>
