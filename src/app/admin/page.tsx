@@ -540,7 +540,7 @@ function UserManagement() {
         const newPassword = prompt('Enter the new password:');
         if (newPassword && newPassword.length >= 6) {
             changePassword(userId, newPassword);
-            toast({title: 'Password changed successfully.'});
+            // The toast is now handled in the context to ensure it fires after state update
         } else if (newPassword) {
             toast({variant: 'destructive', title: 'Password must be at least 6 characters.'});
         }

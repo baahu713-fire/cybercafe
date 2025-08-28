@@ -289,9 +289,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const changePassword = (userId: string, newPassword: string) => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword } : u));
+    const user = users.find(u => u.id === userId);
+    toast({ title: 'Password Changed', description: `Password for ${user?.name} has been updated.`});
   };
 
   const resetAllPasswords = (newPassword: string) => {
+      // Sets the same new password for every user.
       setUsers(prev => prev.map(u => ({ ...u, password: newPassword })));
   };
 
