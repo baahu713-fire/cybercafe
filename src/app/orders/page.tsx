@@ -6,6 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import Image from 'next/image';
 import type { OrderStatus } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import type { Order } from '@/lib/types';
 
 const statusVariants: Record<OrderStatus, "default" | "secondary" | "destructive" | "outline"> = {
     Pending: 'secondary',
@@ -16,17 +20,36 @@ const statusVariants: Record<OrderStatus, "default" | "secondary" | "destructive
 }
 
 export default function OrdersPage() {
-    const { orders } = useAppContext();
+    const { currentUser, orders } = useAppContext();
+    const [userOrders, setUserOrders] = useState<Order[]>([]);
+
+    useEffect(() => {
+        if(currentUser) {
+            setUserOrders(orders.filter(o => o.userId === currentUser.id));
+        }
+    }, [currentUser, orders]);
+
+    if (!currentUser) {
+         return (
+            <div className="text-center py-20">
+                <h1 className="text-2xl font-bold">Please Login</h1>
+                <p className="text-muted-foreground mb-4">You need to be logged in to view your orders.</p>
+                <Button asChild>
+                    <Link href="/login">Login</Link>
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl mx-auto">
             <h1 className="text-4xl font-bold font-headline mb-2">Your Orders</h1>
             <p className="text-muted-foreground mb-6">Track your past and current orders.</p>
-            {orders.length === 0 ? (
+            {userOrders.length === 0 ? (
                 <p>You haven't placed any orders yet.</p>
             ) : (
                 <Accordion type="single" collapsible className="w-full space-y-4">
-                    {orders.map(order => (
+                    {userOrders.map(order => (
                          <Card key={order.id} className="overflow-hidden">
                             <AccordionItem value={order.id} className="border-b-0">
                                 <AccordionTrigger className="p-4 hover:no-underline hover:bg-secondary/50">

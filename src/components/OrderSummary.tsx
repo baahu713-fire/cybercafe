@@ -7,13 +7,28 @@ import { useAppContext } from '@/context/AppContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Trash2, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function OrderSummary() {
-  const { currentOrder, removeFromOrder, updateQuantity, placeOrder } = useAppContext();
+  const { currentUser, currentOrder, removeFromOrder, updateQuantity, placeOrder } = useAppContext();
+  const { toast } = useToast();
 
   const subtotal = currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0);
   const taxes = subtotal * 0.08;
   const total = subtotal + taxes;
+
+  const handlePlaceOrder = () => {
+    if (!currentUser) {
+      toast({
+        variant: 'destructive',
+        title: 'Please log in',
+        description: 'You must be logged in to place an order.',
+      });
+      return;
+    }
+    placeOrder();
+  };
 
   return (
     <Card className="shadow-lg">
@@ -68,9 +83,15 @@ export default function OrderSummary() {
       </CardContent>
       {currentOrder.length > 0 && (
           <CardFooter>
-            <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={placeOrder}>
-              Place Order
-            </Button>
+            {currentUser ? (
+              <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder}>
+                Place Order
+              </Button>
+            ) : (
+              <Button asChild className="w-full">
+                <Link href="/login">Login to Place Order</Link>
+              </Button>
+            )}
           </CardFooter>
       )}
     </Card>

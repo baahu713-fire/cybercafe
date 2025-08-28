@@ -1,14 +1,15 @@
 "use client";
 
-import type { OrderItem, Order, FoodItem } from '@/lib/types';
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { foodItems, userOrders } from '@/lib/data';
+import type { OrderItem, Order, FoodItem, User } from '@/lib/types';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { foodItems, userOrders, mockUsers } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppContextType {
-  isAdmin: boolean;
-  loginAsAdmin: () => void;
+  currentUser: User | null;
+  login: (email: string, password: string) => void;
   logout: () => void;
+  register: (name: string, email: string, password: string) => void;
   currentOrder: OrderItem[];
   addToOrder: (item: OrderItem['item'], quantity?: number) => void;
   removeFromOrder: (itemId: string) => void;
@@ -25,18 +26,52 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>(mockUsers);
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
   const [orders, setOrders] = useState<Order[]>(userOrders);
   const [allFoodItems, setAllFoodItems] = useState(foodItems);
 
-  const loginAsAdmin = () => {
-    setIsAdmin(true);
-    toast({ title: 'Admin mode enabled.' });
+  useEffect(() => {
+    // This is a mock persistence layer. In a real app, you'd use localStorage, cookies, or a server session.
+    const loggedInUser = sessionStorage.getItem('currentUser');
+    if (loggedInUser) {
+        setCurrentUser(JSON.parse(loggedInUser));
+    }
+  }, []);
+
+  const login = (email: string, password: string) => {
+    const user = users.find(u => u.email === email); // In a real app, you'd check the password hash
+    if (user) {
+        setCurrentUser(user);
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        toast({ title: `Welcome back, ${user.name}!` });
+    } else {
+        toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid email or password.' });
+    }
   };
+
   const logout = () => {
-    setIsAdmin(false);
-    toast({ title: 'Admin mode disabled.' });
+    setCurrentUser(null);
+    sessionStorage.removeItem('currentUser');
+    toast({ title: 'You have been logged out.' });
+  };
+  
+  const register = (name: string, email: string, password: string) => {
+    if (users.some(u => u.email === email)) {
+      toast({ variant: 'destructive', title: 'Registration Failed', description: 'A user with this email already exists.' });
+      return;
+    }
+    const newUser: User = {
+      id: `user${users.length + 1}`,
+      name,
+      email,
+      role: 'customer'
+    };
+    setUsers(prev => [...prev, newUser]);
+    setCurrentUser(newUser);
+    sessionStorage.setItem('currentUser', JSON.stringify(newUser));
+    toast({ title: 'Registration successful!', description: `Welcome, ${name}!` });
   };
 
   const addToOrder = (item: OrderItem['item'], quantity: number = 1) => {
@@ -86,13 +121,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
       return;
     }
+    if(!currentUser) {
+         toast({
+          variant: "destructive",
+          title: "Please log in",
+          description: "You must be logged in to place an order.",
+      });
+      return;
+    }
     const newOrder: Order = {
       id: `ORD${(Math.random() * 1000).toFixed(0).padStart(3, '0')}`,
       items: currentOrder,
       total: currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0),
       status: 'Pending',
       orderDate: new Date().toISOString(),
-      userId: 'user1'
+      userId: currentUser.id
     };
     setOrders(prev => [newOrder, ...prev]);
     clearOrder();
@@ -123,7 +166,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AppContext.Provider value={{ isAdmin, loginAsAdmin, logout, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, orders, settleBill, addFoodItem, allFoodItems }}>
+    <AppContext.Provider value={{ currentUser, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, orders, settleBill, addFoodItem, allFoodItems }}>
       {children}
     </AppContext.Provider>
   );

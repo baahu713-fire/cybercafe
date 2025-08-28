@@ -1,4 +1,4 @@
-import type { FoodItem, Order } from './types';
+import type { FoodItem, Order, User } from './types';
 
 export const foodCategories: string[] = ['Pizza', 'Pasta', 'Salads', 'Desserts', 'Beverages'];
 
@@ -83,6 +83,11 @@ export const foodItems: FoodItem[] = [
     ingredients: ['Tomatoes', 'Cucumbers', 'Onion', 'Feta Cheese', 'Olives', 'Olive Oil'],
     availability: true,
   },
+];
+
+export const mockUsers: User[] = [
+    { id: 'user1', name: 'Alice', email: 'alice@example.com', role: 'customer' },
+    { id: 'admin1', name: 'Bob', email: 'bob@example.com', role: 'admin' },
 ];
 
 export const userOrders: Order[] = [

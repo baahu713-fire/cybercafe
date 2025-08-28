@@ -24,3 +24,10 @@ export interface Order {
   orderDate: string;
   userId: string;
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'customer' | 'admin';
+}

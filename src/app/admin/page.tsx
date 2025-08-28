@@ -30,9 +30,9 @@ const foodItemSchema = z.object({
 type FoodItemFormValues = z.infer<typeof foodItemSchema>;
 
 export default function AdminPage() {
-    const { isAdmin, orders, settleBill, addFoodItem } = useAppContext();
+    const { currentUser, orders, settleBill, addFoodItem } = useAppContext();
     
-    if (!isAdmin) {
+    if (currentUser?.role !== 'admin') {
         return (
             <div className="text-center py-20">
                 <h1 className="text-2xl font-bold">Access Denied</h1>
@@ -74,6 +74,7 @@ function OrderManagement({ orders, onSettle }: { orders: Order[], onSettle: (ord
                     <TableHeader>
                         <TableRow>
                             <TableHead>Order ID</TableHead>
+                            <TableHead>User ID</TableHead>
                             <TableHead>Date</TableHead>
                             <TableHead>Total</TableHead>
                             <TableHead>Status</TableHead>
@@ -84,6 +85,7 @@ function OrderManagement({ orders, onSettle }: { orders: Order[], onSettle: (ord
                         {orders.map(order => (
                             <TableRow key={order.id}>
                                 <TableCell className="font-medium">{order.id}</TableCell>
+                                <TableCell>{order.userId}</TableCell>
                                 <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
                                 <TableCell>${order.total.toFixed(2)}</TableCell>
                                 <TableCell><Badge variant={order.status === 'Settled' || order.status === 'Delivered' ? 'default' : 'secondary'}>{order.status}</Badge></TableCell>

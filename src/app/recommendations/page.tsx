@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,13 +10,22 @@ import { useAppContext } from '@/context/AppContext';
 import { Sparkles } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
+import type { Order } from '@/lib/types';
 
 export default function RecommendationsPage() {
-  const { orders } = useAppContext();
+  const { currentUser, orders } = useAppContext();
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [dietaryPreferences, setDietaryPreferences] = useState('');
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+   useEffect(() => {
+        if(currentUser) {
+            setUserOrders(orders.filter(o => o.userId === currentUser.id));
+        }
+    }, [currentUser, orders]);
 
   const handleGetRecommendations = async () => {
     setIsLoading(true);
@@ -24,7 +33,7 @@ export default function RecommendationsPage() {
     setRecommendations([]);
 
     const orderHistory = JSON.stringify(
-        orders.map(o => ({
+        userOrders.map(o => ({
             id: o.id,
             items: o.items.map(i => ({ name: i.item.name, quantity: i.quantity })),
             total: o.total,
@@ -43,6 +52,18 @@ export default function RecommendationsPage() {
         setIsLoading(false);
     }
   };
+
+  if (!currentUser) {
+    return (
+        <div className="text-center py-20">
+            <h1 className="text-2xl font-bold">Please Login</h1>
+            <p className="text-muted-foreground mb-4">You need to be logged in to get recommendations.</p>
+            <Button asChild>
+                <Link href="/login">Login</Link>
+            </Button>
+        </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -66,9 +87,13 @@ export default function RecommendationsPage() {
               placeholder="e.g., vegetarian, gluten-free"
             />
           </div>
-          <Button onClick={handleGetRecommendations} disabled={isLoading} className="w-full">
+          <Button onClick={handleGetRecommendations} disabled={isLoading || userOrders.length === 0} className="w-full">
             {isLoading ? 'Getting Recommendations...' : 'Get Recommendations'}
           </Button>
+
+            {userOrders.length === 0 && (
+                <p className="text-sm text-center text-muted-foreground">You need to place at least one order to get recommendations.</p>
+            )}
 
           {isLoading && (
             <div className="space-y-2 pt-4">
