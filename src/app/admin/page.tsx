@@ -540,7 +540,8 @@ function UserManagement() {
         const newPassword = prompt('Enter the new password:');
         if (newPassword && newPassword.length >= 6) {
             changePassword(userId, newPassword);
-            // The toast is now handled in the context to ensure it fires after state update
+            const user = users.find(u => u.id === userId);
+            toast({ title: 'Password Changed', description: `Password for ${user?.name} has been updated.`});
         } else if (newPassword) {
             toast({variant: 'destructive', title: 'Password must be at least 6 characters.'});
         }
@@ -814,6 +815,8 @@ function PasswordRequestManagement() {
         </Card>
     );
 }
+    
+
     
 
     
