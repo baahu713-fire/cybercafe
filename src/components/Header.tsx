@@ -38,9 +38,8 @@ export default function Header() {
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           <NavLink href="/">Menu</NavLink>
-          {currentUser && <NavLink href="/orders">My Orders</NavLink>}
-          {currentUser && <NavLink href="/recommendations">Recommendations</NavLink>}
-          <NavLink href="/feedback">Feedback</NavLink>
+          {currentUser && currentUser.role !== 'admin' && <NavLink href="/orders">My Orders</NavLink>}
+          {currentUser && currentUser.role !== 'admin' && <NavLink href="/feedback">Feedback</NavLink>}
           {currentUser?.role === 'admin' && <NavLink href="/admin">Admin</NavLink>}
         </nav>
         <div className="flex items-center gap-4">
@@ -86,9 +85,8 @@ export default function Header() {
             <SheetContent side="right">
               <nav className="flex flex-col gap-4 mt-8 text-lg">
                 <NavLink href="/">Menu</NavLink>
-                {currentUser && <NavLink href="/orders">My Orders</NavLink>}
-                {currentUser && <NavLink href="/recommendations">Recommendations</NavLink>}
-                <NavLink href="/feedback">Feedback</NavLink>
+                {currentUser && currentUser.role !== 'admin' && <NavLink href="/orders">My Orders</NavLink>}
+                {currentUser && currentUser.role !== 'admin' && <NavLink href="/feedback">Feedback</NavLink>}
                 {currentUser?.role === 'admin' && <NavLink href="/admin">Admin</NavLink>}
                 <div className="border-t pt-4 mt-2 flex flex-col gap-2">
                  {currentUser ? (
