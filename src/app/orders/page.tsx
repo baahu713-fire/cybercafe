@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAppContext } from '@/context/AppContext';
@@ -18,6 +19,39 @@ const statusVariants: Record<OrderStatus, "default" | "secondary" | "destructive
     Cancelled: 'destructive',
     Settled: 'default',
 }
+
+function CancelOrderButton({ order }: { order: Order }) {
+    const { cancelOrder } = useAppContext();
+    const [canCancel, setCanCancel] = useState(false);
+
+    useEffect(() => {
+        const orderDate = new Date(order.orderDate);
+        const now = new Date();
+        const diffInSeconds = (now.getTime() - orderDate.getTime()) / 1000;
+
+        if (order.status === 'Pending' && diffInSeconds < 60) {
+            setCanCancel(true);
+            const timer = setTimeout(() => {
+                setCanCancel(false);
+            }, (60 - diffInSeconds) * 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [order]);
+
+    if (!canCancel) return null;
+
+    return (
+        <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => cancelOrder(order.id)}
+            className="mt-2"
+        >
+            Cancel Order
+        </Button>
+    );
+}
+
 
 export default function OrdersPage() {
     const { currentUser, orders } = useAppContext();
@@ -78,6 +112,7 @@ export default function OrdersPage() {
                                             </div>
                                         ))}
                                     </div>
+                                    <CancelOrderButton order={order} />
                                 </AccordionContent>
                             </AccordionItem>
                         </Card>

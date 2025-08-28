@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { OrderItem, Order, FoodItem, User, OrderStatus, Feedback, UserRole } from '@/lib/types';
@@ -17,6 +18,7 @@ interface AppContextType {
   updateQuantity: (itemId: string, quantity: number) => void;
   clearOrder: () => void;
   placeOrder: (userId: string) => void;
+  cancelOrder: (orderId: string) => void;
   orders: Order[];
   settleBill: (orderId: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
@@ -133,10 +135,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    const subtotal = currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0);
+    const total = subtotal * 1.05; // subtotal + 5% tax
+
     const newOrder: Order = {
       id: `ORD${(Math.random() * 1000).toFixed(0).padStart(3, '0')}`,
       items: currentOrder,
-      total: currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0),
+      total,
       status: 'Pending',
       orderDate: new Date().toISOString(),
       userId: userId,
@@ -147,6 +152,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         title: "Order Placed!",
         description: `Order has been successfully placed for user ${userId}.`,
     });
+  };
+
+  const cancelOrder = (orderId: string) => {
+      const orderToCancel = orders.find(o => o.id === orderId);
+      if (!orderToCancel) return;
+
+      const orderDate = new Date(orderToCancel.orderDate);
+      const now = new Date();
+      const diffInSeconds = (now.getTime() - orderDate.getTime()) / 1000;
+
+      if (orderToCancel.status === 'Pending' && diffInSeconds < 60) {
+          updateOrderStatus(orderId, 'Cancelled');
+          toast({ title: 'Order Cancelled', description: `Order ${orderId} has been successfully cancelled.` });
+      } else {
+          toast({ variant: 'destructive', title: 'Cancellation Failed', description: 'The cancellation window for this order has passed.' });
+      }
   };
   
   const settleBill = (orderId: string) => {
@@ -168,7 +189,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
     setOrders(prev => prev.map(o => o.id === orderId ? {...o, status } : o));
-    if (status !== 'Settled') { // Avoid double toast for settleBill
+    if (status !== 'Settled' && status !== 'Cancelled') { // Avoid double toast
         toast({
             title: "Order Updated",
             description: `Order ${orderId} status changed to ${status}.`,
@@ -234,7 +255,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, submitFeedback, feedbacks, addUser, updateUser, deleteUser }}>
+    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, cancelOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, submitFeedback, feedbacks, addUser, updateUser, deleteUser }}>
       {children}
     </AppContext.Provider>
   );
