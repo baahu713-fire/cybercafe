@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -29,6 +30,9 @@ export default function Header() {
     </Link>
   );
 
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  const isCustomer = currentUser?.role === 'customer';
+
   return (
     <header className="bg-card border-b sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4 flex justify-between items-center h-16">
@@ -38,9 +42,9 @@ export default function Header() {
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           <NavLink href="/">Menu</NavLink>
-          {currentUser && currentUser.role !== 'admin' && <NavLink href="/orders">My Orders</NavLink>}
-          {currentUser && currentUser.role !== 'admin' && <NavLink href="/feedback">Feedback</NavLink>}
-          {currentUser?.role === 'admin' && <NavLink href="/admin">Admin</NavLink>}
+          {isCustomer && <NavLink href="/orders">My Orders</NavLink>}
+          {isCustomer && <NavLink href="/feedback">Feedback</NavLink>}
+          {isAdmin && <NavLink href="/admin">Admin</NavLink>}
         </nav>
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="relative">
@@ -85,14 +89,14 @@ export default function Header() {
             <SheetContent side="right">
               <nav className="flex flex-col gap-4 mt-8 text-lg">
                 <NavLink href="/">Menu</NavLink>
-                {currentUser && currentUser.role !== 'admin' && <NavLink href="/orders">My Orders</NavLink>}
-                {currentUser && currentUser.role !== 'admin' && <NavLink href="/feedback">Feedback</NavLink>}
-                {currentUser?.role === 'admin' && <NavLink href="/admin">Admin</NavLink>}
+                {isCustomer && <NavLink href="/orders">My Orders</NavLink>}
+                {isCustomer && <NavLink href="/feedback">Feedback</NavLink>}
+                {isAdmin && <NavLink href="/admin">Admin</NavLink>}
                 <div className="border-t pt-4 mt-2 flex flex-col gap-2">
                  {currentUser ? (
                     <>
                       <div className="flex items-center gap-2">
-                         {currentUser.role === 'admin' ? <Shield/> : <User />}
+                         {isAdmin ? <Shield/> : <User />}
                         <span>{currentUser.name}</span>
                       </div>
                       <Button onClick={() => { handleLogout(); setIsSheetOpen(false); }} variant="outline">
