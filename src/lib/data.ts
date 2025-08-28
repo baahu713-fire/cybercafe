@@ -88,6 +88,7 @@ export const foodItems: FoodItem[] = [
 export const mockUsers: User[] = [
     { id: 'user1', name: 'Alice', email: 'alice@example.com', role: 'customer' },
     { id: 'admin1', name: 'Bob', email: 'bob@example.com', role: 'admin' },
+    { id: 'superadmin1', name: 'Charlie', email: 'charlie@example.com', role: 'superadmin' },
 ];
 
 export const userOrders: Order[] = [
@@ -113,4 +114,15 @@ export const userOrders: Order[] = [
         status: 'Pending',
         orderDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     },
+    {
+        id: 'ORD003',
+        userId: 'user1',
+        items: [
+            { item: foodItems[4], quantity: 1 },
+            { item: foodItems[6], quantity: 1 },
+        ],
+        total: 22.00,
+        status: 'Confirmed',
+        orderDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    }
 ];

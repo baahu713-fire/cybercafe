@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderItem, Order, FoodItem, User, OrderStatus, Feedback } from '@/lib/types';
+import type { OrderItem, Order, FoodItem, User, OrderStatus, Feedback, UserRole } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { foodItems, userOrders, mockUsers } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,9 @@ interface AppContextType {
   allFoodItems: FoodItem[];
   submitFeedback: (feedback: Feedback) => void;
   feedbacks: Feedback[];
+  addUser: (user: Omit<User, 'id'>) => void;
+  updateUser: (user: User) => void;
+  deleteUser: (userId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -210,8 +213,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     console.log("New Feedback:", feedback);
   }
 
+  const addUser = (user: Omit<User, 'id'>) => {
+    if (users.some(u => u.email === user.email)) {
+      toast({ variant: 'destructive', title: 'Add User Failed', description: 'A user with this email already exists.' });
+      return;
+    }
+    const newUser = { ...user, id: `user${users.length + 1}` };
+    setUsers(prev => [...prev, newUser]);
+    toast({ title: "User Added", description: `User ${user.name} has been added.`});
+  }
+
+  const updateUser = (user: User) => {
+    setUsers(prev => prev.map(u => u.id === user.id ? user : u));
+    toast({ title: "User Updated", description: `User ${user.name}'s details have been updated.`});
+  }
+
+  const deleteUser = (userId: string) => {
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    toast({ title: "User Deleted", description: `User has been removed.`});
+  }
+
   return (
-    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, submitFeedback, feedbacks }}>
+    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, submitFeedback, feedbacks, addUser, updateUser, deleteUser }}>
       {children}
     </AppContext.Provider>
   );

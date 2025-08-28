@@ -25,11 +25,13 @@ export interface Order {
   userId: string;
 }
 
+export type UserRole = 'customer' | 'admin' | 'superadmin';
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'customer' | 'admin';
+  role: UserRole;
 }
 
 export interface Feedback {
@@ -40,5 +42,3 @@ export interface Feedback {
   comment?: string;
   date: string;
 }
-
-    
