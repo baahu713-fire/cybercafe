@@ -6,23 +6,43 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Search } from 'lucide-react';
 import type { FoodItem } from '@/lib/types';
 import { useAppContext } from '@/context/AppContext';
 import { foodCategories } from '@/lib/data';
+import { Input } from '@/components/ui/input';
 
 export default function FoodMenu() {
   const { allFoodItems, addToOrder } = useAppContext();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredItems = activeCategory === 'All'
+  const categoryFilteredItems = activeCategory === 'All'
     ? allFoodItems
     : allFoodItems.filter(item => item.category === activeCategory);
 
+  const filteredItems = categoryFilteredItems.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div>
-      <h1 className="text-4xl font-bold font-headline mb-2">Our Menu</h1>
-      <p className="text-muted-foreground mb-6">Discover our delicious range of dishes, crafted with the freshest ingredients.</p>
+        <div className="flex justify-between items-start mb-6">
+            <div>
+                <h1 className="text-4xl font-bold font-headline mb-2">Our Menu</h1>
+                <p className="text-muted-foreground">Discover our delicious range of dishes, crafted with the freshest ingredients.</p>
+            </div>
+             <div className="relative w-full max-w-xs">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search for food..." 
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+        </div>
       
       <Tabs defaultValue="All" onValueChange={setActiveCategory} className="w-full mb-8">
         <TabsList className="grid w-full grid-cols-3 md:grid-cols-6">
@@ -38,7 +58,7 @@ export default function FoodMenu() {
           <FoodItemCard key={item.id} item={item} onAddToOrder={() => addToOrder(item)} />
         ))}
         {filteredItems.length === 0 && (
-          <p className="text-muted-foreground col-span-full text-center">No items available in this category.</p>
+          <p className="text-muted-foreground col-span-full text-center">No items found.</p>
         )}
       </div>
     </div>

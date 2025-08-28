@@ -16,7 +16,7 @@ interface AppContextType {
   removeFromOrder: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearOrder: () => void;
-  placeOrder: () => void;
+  placeOrder: (userId: string) => void;
   orders: Order[];
   settleBill: (orderId: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
@@ -120,7 +120,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setCurrentOrder([]);
   };
 
-  const placeOrder = () => {
+  const placeOrder = (userId: string) => {
     if (currentOrder.length === 0) {
       toast({
           variant: "destructive",
@@ -129,49 +129,53 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
       return;
     }
-    if(!currentUser) {
-         toast({
-          variant: "destructive",
-          title: "Please log in",
-          description: "You must be logged in to place an order.",
-      });
-      return;
-    }
+
     const newOrder: Order = {
       id: `ORD${(Math.random() * 1000).toFixed(0).padStart(3, '0')}`,
       items: currentOrder,
       total: currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0),
       status: 'Pending',
       orderDate: new Date().toISOString(),
-      userId: currentUser.id
+      userId: userId,
     };
     setOrders(prev => [newOrder, ...prev]);
     clearOrder();
     toast({
         title: "Order Placed!",
-        description: "Your order has been successfully placed.",
+        description: `Order has been successfully placed for user ${userId}.`,
     });
   };
   
   const settleBill = (orderId: string) => {
-    updateOrderStatus(orderId, 'Settled');
-    toast({
-        title: "Bill Settled",
-        description: `Order ${orderId} has been marked as settled.`,
-    });
+    const orderToSettle = orders.find(o => o.id === orderId);
+    if (orderToSettle && orderToSettle.status === 'Delivered') {
+        updateOrderStatus(orderId, 'Settled');
+        toast({
+            title: "Bill Settled",
+            description: `Order ${orderId} has been marked as settled.`,
+        });
+    } else {
+         toast({
+            variant: 'destructive',
+            title: "Cannot Settle Bill",
+            description: `Order ${orderId} must be in 'Delivered' status to be settled.`,
+        });
+    }
   };
   
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
     setOrders(prev => prev.map(o => o.id === orderId ? {...o, status } : o));
-    toast({
-        title: "Order Updated",
-        description: `Order ${orderId} status changed to ${status}.`,
-    });
+    if (status !== 'Settled') { // Avoid double toast for settleBill
+        toast({
+            title: "Order Updated",
+            description: `Order ${orderId} status changed to ${status}.`,
+        });
+    }
   }
   
   const settleUserBills = (userId: string) => {
-    setOrders(prev => prev.map(o => (o.userId === userId && o.status !== 'Settled') ? {...o, status: 'Settled'} : o));
-    toast({ title: "User Bills Settled", description: `All outstanding bills for user ${userId} have been settled.` });
+    setOrders(prev => prev.map(o => (o.userId === userId && o.status === 'Delivered') ? {...o, status: 'Settled'} : o));
+    toast({ title: "User Bills Settled", description: `All deliverd bills for user ${userId} have been settled.` });
   }
 
   const addFoodItem = (item: Omit<FoodItem, 'id'>) => {
@@ -220,5 +224,3 @@ export const useAppContext = () => {
   }
   return context;
 };
-
-    

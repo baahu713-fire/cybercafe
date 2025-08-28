@@ -18,7 +18,7 @@ import type { FoodItem, Order, OrderStatus, User } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useState } from 'react';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const foodItemSchema = z.object({
@@ -73,11 +73,27 @@ export default function AdminPage() {
 
 function OrderManagement({ orders, onSettle, onUpdateStatus }: { orders: Order[], onSettle: (orderId: string) => void, onUpdateStatus: (orderId: string, status: OrderStatus) => void }) {
     const orderStatuses: OrderStatus[] = ['Pending', 'Confirmed', 'Delivered', 'Cancelled', 'Settled'];
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredOrders = orders.filter(order => 
+        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.userId.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle>All Orders</CardTitle>
                 <CardDescription>View and manage all customer orders.</CardDescription>
+                <div className="relative mt-2">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search by Order ID or User ID..." 
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -92,14 +108,18 @@ function OrderManagement({ orders, onSettle, onUpdateStatus }: { orders: Order[]
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {orders.map(order => (
+                        {filteredOrders.map(order => (
                             <TableRow key={order.id}>
                                 <TableCell className="font-medium">{order.id}</TableCell>
                                 <TableCell>{order.userId}</TableCell>
                                 <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
                                 <TableCell>${order.total.toFixed(2)}</TableCell>
                                 <TableCell>
-                                    <Select onValueChange={(value) => onUpdateStatus(order.id, value as OrderStatus)} defaultValue={order.status}>
+                                    <Select 
+                                        onValueChange={(value) => onUpdateStatus(order.id, value as OrderStatus)} 
+                                        defaultValue={order.status}
+                                        disabled={order.status === 'Settled'}
+                                    >
                                         <SelectTrigger className="w-[120px]">
                                             <SelectValue />
                                         </SelectTrigger>
@@ -109,7 +129,7 @@ function OrderManagement({ orders, onSettle, onUpdateStatus }: { orders: Order[]
                                     </Select>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    {order.status !== 'Settled' && (
+                                    {order.status === 'Delivered' && (
                                         <Button size="sm" onClick={() => onSettle(order.id)}>Settle Bill</Button>
                                     )}
                                 </TableCell>
@@ -126,6 +146,12 @@ function ItemManagement({ onAddItem, onUpdateItem, onDeleteItem }: { onAddItem: 
     const { allFoodItems } = useAppContext();
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredItems = allFoodItems.filter(item => 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const handleEdit = (item: FoodItem) => {
         setEditingItem(item);
@@ -145,32 +171,43 @@ function ItemManagement({ onAddItem, onUpdateItem, onDeleteItem }: { onAddItem: 
     
     return (
         <Card>
-            <CardHeader className="flex flex-row justify-between items-center">
-                <div>
-                    <CardTitle>Food Items</CardTitle>
-                    <CardDescription>Manage your menu items.</CardDescription>
+            <CardHeader>
+                <div className="flex flex-row justify-between items-center">
+                    <div>
+                        <CardTitle>Food Items</CardTitle>
+                        <CardDescription>Manage your menu items.</CardDescription>
+                    </div>
+                     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                        <DialogTrigger asChild>
+                            <Button onClick={handleAddNew}>Add New Item</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>{editingItem ? 'Edit' : 'Add'} Food Item</DialogTitle>
+                            </DialogHeader>
+                            <FoodItemForm 
+                                onSave={(itemData) => {
+                                    if (editingItem) {
+                                        onUpdateItem({ ...itemData, id: editingItem.id });
+                                    } else {
+                                        onAddItem(itemData);
+                                    }
+                                    setIsFormOpen(false);
+                                }}
+                                initialData={editingItem}
+                            />
+                        </DialogContent>
+                    </Dialog>
                 </div>
-                 <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                    <DialogTrigger asChild>
-                        <Button onClick={handleAddNew}>Add New Item</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>{editingItem ? 'Edit' : 'Add'} Food Item</DialogTitle>
-                        </DialogHeader>
-                        <FoodItemForm 
-                            onSave={(itemData) => {
-                                if (editingItem) {
-                                    onUpdateItem({ ...itemData, id: editingItem.id });
-                                } else {
-                                    onAddItem(itemData);
-                                }
-                                setIsFormOpen(false);
-                            }}
-                            initialData={editingItem}
-                        />
-                    </DialogContent>
-                </Dialog>
+                 <div className="relative mt-2">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search by name or description..." 
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -184,7 +221,7 @@ function ItemManagement({ onAddItem, onUpdateItem, onDeleteItem }: { onAddItem: 
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {allFoodItems.map(item => (
+                        {filteredItems.map(item => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.category}</TableCell>
@@ -277,11 +314,28 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
 }
 
 function UserManagement({ users, onSettleUser }: { users: User[], onSettleUser: (userId: string) => void }) {
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    const filteredUsers = users.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <Card>
             <CardHeader>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>View users and manage their accounts.</CardDescription>
+                 <div className="relative mt-2">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search by User ID, name or email..." 
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -295,7 +349,7 @@ function UserManagement({ users, onSettleUser }: { users: User[], onSettleUser: 
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {users.map(user => (
+                        {filteredUsers.map(user => (
                             <TableRow key={user.id}>
                                 <TableCell>{user.id}</TableCell>
                                 <TableCell className="font-medium">{user.name}</TableCell>

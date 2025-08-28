@@ -5,14 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAppContext } from '@/context/AppContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Minus, Trash2, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, User } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 export default function OrderSummary() {
-  const { currentUser, currentOrder, removeFromOrder, updateQuantity, placeOrder } = useAppContext();
+  const { currentUser, users, currentOrder, removeFromOrder, updateQuantity, placeOrder } = useAppContext();
   const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const subtotal = currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0);
   const taxes = subtotal * 0.08;
@@ -27,8 +32,24 @@ export default function OrderSummary() {
       });
       return;
     }
-    placeOrder();
+    placeOrder(currentUser.id);
   };
+
+  const handleAdminPlaceOrder = () => {
+      if (!selectedUserId) {
+           toast({
+                variant: 'destructive',
+                title: 'No user selected',
+                description: 'Please select a user to place the order for.',
+            });
+            return;
+      }
+      placeOrder(selectedUserId);
+      setIsDialogOpen(false);
+      setSelectedUserId(null);
+  }
+
+  const customerUsers = users.filter(u => u.role === 'customer');
 
   return (
     <Card className="shadow-lg">
@@ -83,13 +104,42 @@ export default function OrderSummary() {
       </CardContent>
       {currentOrder.length > 0 && (
           <CardFooter>
-            {currentUser ? (
-              <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder}>
-                Place Order
-              </Button>
-            ) : (
+            {!currentUser ? (
               <Button asChild className="w-full">
                 <Link href="/login">Login to Place Order</Link>
+              </Button>
+            ) : currentUser.role === 'admin' ? (
+                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                         <Button className="w-full">
+                            <User className="mr-2" /> Place Order For User
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Place Order for a Customer</DialogTitle>
+                            <DialogDescription>Select a customer to place the current order for.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                           <Select onValueChange={setSelectedUserId} value={selectedUserId ?? undefined}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a customer..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {customerUsers.map(user => (
+                                        <SelectItem key={user.id} value={user.id}>{user.name} ({user.email})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button className="w-full" onClick={handleAdminPlaceOrder} disabled={!selectedUserId}>
+                                Confirm Order for User
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            ) : (
+              <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={handlePlaceOrder}>
+                Place Order
               </Button>
             )}
           </CardFooter>
