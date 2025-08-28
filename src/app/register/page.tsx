@@ -33,8 +33,10 @@ export default function RegisterPage() {
     });
 
     const onSubmit = (data: RegisterFormValues) => {
-        register(data.name, data.email, data.password);
-        router.push('/');
+        const registered = register(data.name, data.email, data.password);
+        if (registered) {
+            router.push('/');
+        }
     };
 
     return (
@@ -94,3 +96,5 @@ export default function RegisterPage() {
         </div>
     );
 }
+
+    

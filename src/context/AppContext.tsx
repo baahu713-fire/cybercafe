@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { OrderItem, Order, FoodItem, User, OrderStatus, Feedback, UserRole, Portion, TimeOfDay } from '@/lib/types';
+import type { OrderItem, Order, FoodItem, User, OrderStatus, Feedback, UserRole, Portion, TimeOfDay, PasswordResetRequest } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { foodItems, userOrders, mockUsers } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
@@ -20,9 +20,9 @@ const getCurrentTimeOfDay = (): TimeOfDay => {
 interface AppContextType {
   currentUser: User | null;
   users: User[];
-  login: (email: string, password: string) => void;
+  login: (email: string, password: string) => boolean;
   logout: () => void;
-  register: (name: string, email: string, password: string) => void;
+  register: (name: string, email: string, password: string) => boolean;
   currentOrder: OrderItem[];
   addToOrder: (item: FoodItem, portion: Portion, quantity?: number) => void;
   removeFromOrder: (itemId: string, portionName: string) => void;
@@ -41,9 +41,14 @@ interface AppContextType {
   availableFoodItems: FoodItem[];
   submitFeedback: (feedback: Feedback) => void;
   feedbacks: Feedback[];
-  addUser: (user: Omit<User, 'id'>) => void;
+  addUser: (user: Omit<User, 'id' | 'password'> & { password?: string }) => void;
   updateUser: (user: User) => void;
   deleteUser: (userId: string) => void;
+  changePassword: (userId: string, newPassword: string) => void;
+  resetAllPasswords: (newPassword: string) => void;
+  requestPasswordReset: (email: string) => boolean;
+  resolvePasswordResetRequest: (requestId: string, newPassword: string) => void;
+  passwordResetRequests: PasswordResetRequest[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,6 +62,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [allFoodItems, setAllFoodItems] = useState(foodItems);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [currentTimeOfDay, setCurrentTimeOfDay] = useState<TimeOfDay>(getCurrentTimeOfDay());
+  const [passwordResetRequests, setPasswordResetRequests] = useState<PasswordResetRequest[]>([]);
+
 
   useEffect(() => {
     // This is a mock persistence layer. In a real app, you'd use localStorage, cookies, or a server session.
@@ -76,14 +83,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     item.availability && (item.availableTimes.includes('All Day') || item.availableTimes.includes(currentTimeOfDay))
   );
 
-  const login = (email: string, password: string) => {
-    const user = users.find(u => u.email === email); // In a real app, you'd check the password hash
+  const login = (email: string, password: string): boolean => {
+    const user = users.find(u => u.email === email && u.password === password);
     if (user) {
         setCurrentUser(user);
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         toast({ title: `Welcome back, ${user.name}!` });
+        return true;
     } else {
         toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid email or password.' });
+        return false;
     }
   };
 
@@ -93,21 +102,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: 'You have been logged out.' });
   };
   
-  const register = (name: string, email: string, password: string) => {
+  const register = (name: string, email: string, password: string): boolean => {
     if (users.some(u => u.email === email)) {
       toast({ variant: 'destructive', title: 'Registration Failed', description: 'A user with this email already exists.' });
-      return;
+      return false;
     }
     const newUser: User = {
       id: `user${users.length + 1}`,
       name,
       email,
+      password,
       role: 'customer'
     };
     setUsers(prev => [...prev, newUser]);
     setCurrentUser(newUser);
     sessionStorage.setItem('currentUser', JSON.stringify(newUser));
     toast({ title: 'Registration successful!', description: `Welcome, ${name}!` });
+    return true;
   };
 
   const addToOrder = (item: FoodItem, portion: Portion, quantity: number = 1) => {
@@ -276,8 +287,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "User Deleted", description: `User has been removed.`});
   }
 
+  const changePassword = (userId: string, newPassword: string) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword } : u));
+  };
+
+  const resetAllPasswords = (newPassword: string) => {
+      setUsers(prev => prev.map(u => ({ ...u, password: newPassword })));
+  };
+
+  const requestPasswordReset = (email: string): boolean => {
+      const user = users.find(u => u.email === email);
+      if (user) {
+          const newRequest: PasswordResetRequest = {
+              requestId: `req${Date.now()}`,
+              userId: user.id,
+              userEmail: user.email,
+              date: new Date().toISOString(),
+          };
+          setPasswordResetRequests(prev => [...prev, newRequest]);
+          return true;
+      }
+      return false;
+  };
+
+  const resolvePasswordResetRequest = (requestId: string, newPassword: string) => {
+      const request = passwordResetRequests.find(r => r.requestId === requestId);
+      if (request) {
+          changePassword(request.userId, newPassword);
+          setPasswordResetRequests(prev => prev.filter(r => r.requestId !== requestId));
+      }
+  };
+
   return (
-    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, cancelOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, availableFoodItems, submitFeedback, feedbacks, addUser, updateUser, deleteUser }}>
+    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, cancelOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, availableFoodItems, submitFeedback, feedbacks, addUser, updateUser, deleteUser, changePassword, resetAllPasswords, requestPasswordReset, resolvePasswordResetRequest, passwordResetRequests }}>
       {children}
     </AppContext.Provider>
   );

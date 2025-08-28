@@ -41,6 +41,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: UserRole;
 }
 
@@ -52,3 +53,12 @@ export interface Feedback {
   comment?: string;
   date: string;
 }
+
+export interface PasswordResetRequest {
+  requestId: string;
+  userId: string;
+  userEmail: string;
+  date: string;
+}
+
+    

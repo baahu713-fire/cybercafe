@@ -15,11 +15,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { foodCategories } from '@/lib/data';
-import type { FoodItem, Order, OrderStatus, User, UserRole, Portion, TimeOfDay } from '@/lib/types';
+import type { FoodItem, Order, OrderStatus, User, UserRole, Portion, TimeOfDay, PasswordResetRequest } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useState } from 'react';
-import { Edit, Trash2, Search, ArrowUpDown, PlusCircle, X } from 'lucide-react';
+import { Edit, Trash2, Search, ArrowUpDown, PlusCircle, X, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
@@ -52,6 +52,7 @@ const userSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, 'Name is required.'),
   email: z.string().email('Invalid email address.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
   role: z.enum(['customer', 'admin', 'superadmin']),
 });
 
@@ -71,16 +72,19 @@ export default function AdminPage() {
         );
     }
     
+    const isSuperAdmin = context.currentUser?.role === 'superadmin';
+
     return (
         <div className="max-w-7xl mx-auto">
             <h1 className="text-4xl font-bold font-headline mb-2">Admin Dashboard</h1>
             <p className="text-muted-foreground mb-6">Manage food items, orders, and users.</p>
 
             <Tabs defaultValue="orders">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className={cn("grid w-full", isSuperAdmin ? "grid-cols-4" : "grid-cols-3")}>
                     <TabsTrigger value="orders">Manage Orders</TabsTrigger>
                     <TabsTrigger value="items">Manage Items</TabsTrigger>
                     <TabsTrigger value="users">Manage Users</TabsTrigger>
+                    {isSuperAdmin && <TabsTrigger value="requests">Password Requests</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="orders">
                     <OrderManagement />
@@ -91,6 +95,11 @@ export default function AdminPage() {
                  <TabsContent value="users">
                     <UserManagement />
                 </TabsContent>
+                {isSuperAdmin && (
+                    <TabsContent value="requests">
+                        <PasswordRequestManagement />
+                    </TabsContent>
+                )}
             </Tabs>
         </div>
     );
@@ -501,10 +510,11 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
 }
 
 function UserManagement() {
-    const { users, currentUser, settleUserBills, addUser, updateUser, deleteUser } = useAppContext();
+    const { users, currentUser, settleUserBills, addUser, updateUser, deleteUser, changePassword, resetAllPasswords } = useAppContext();
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const { toast } = useToast();
     
     const filteredUsers = users.filter(user => 
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -526,6 +536,26 @@ function UserManagement() {
         deleteUser(userId);
     }
 
+    const handleChangePassword = (userId: string) => {
+        const newPassword = prompt('Enter the new password:');
+        if (newPassword && newPassword.length >= 6) {
+            changePassword(userId, newPassword);
+            toast({title: 'Password changed successfully.'});
+        } else if (newPassword) {
+            toast({variant: 'destructive', title: 'Password must be at least 6 characters.'});
+        }
+    }
+
+    const handleResetAllPasswords = () => {
+        const newPassword = prompt('Enter the new password for ALL users:');
+        if (newPassword && newPassword.length >= 6) {
+            resetAllPasswords(newPassword);
+            toast({title: 'All passwords have been reset.'});
+        } else if (newPassword) {
+            toast({variant: 'destructive', title: 'Password must be at least 6 characters.'});
+        }
+    }
+
     const roleBadges: Record<UserRole, 'default' | 'destructive' | 'secondary'> = {
         superadmin: 'destructive',
         admin: 'default',
@@ -541,27 +571,46 @@ function UserManagement() {
                         <CardDescription>View users and manage their accounts.</CardDescription>
                     </div>
                      {currentUser?.role === 'superadmin' && (
-                         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                            <DialogTrigger asChild>
-                                <Button onClick={handleAddNew}><PlusCircle className="mr-2"/>Add User</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>{editingUser ? 'Edit' : 'Add'} User</DialogTitle>
-                                </DialogHeader>
-                                <UserForm
-                                    initialData={editingUser}
-                                    onSave={(data) => {
-                                        if (editingUser) {
-                                            updateUser({ ...data, id: editingUser.id });
-                                        } else {
-                                            addUser(data);
-                                        }
-                                        setIsFormOpen(false);
-                                    }}
-                                />
-                            </DialogContent>
-                        </Dialog>
+                         <div className="flex gap-2">
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">Reset All Passwords</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action will reset the password for EVERY user. This cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleResetAllPasswords}>Continue</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                                <DialogTrigger asChild>
+                                    <Button onClick={handleAddNew}><PlusCircle className="mr-2"/>Add User</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>{editingUser ? 'Edit' : 'Add'} User</DialogTitle>
+                                    </DialogHeader>
+                                    <UserForm
+                                        initialData={editingUser}
+                                        onSave={(data) => {
+                                            if (editingUser) {
+                                                updateUser({ ...data, id: editingUser.id });
+                                            } else {
+                                                addUser(data);
+                                            }
+                                            setIsFormOpen(false);
+                                        }}
+                                    />
+                                </DialogContent>
+                            </Dialog>
+                         </div>
                      )}
                 </div>
                  <div className="relative mt-2">
@@ -598,6 +647,7 @@ function UserManagement() {
                                     )}
                                     {currentUser?.role === 'superadmin' && user.id !== currentUser.id && (
                                         <>
+                                            <Button variant="ghost" size="icon" onClick={() => handleChangePassword(user.id)}><KeyRound className="h-4 w-4" /></Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}><Edit className="h-4 w-4" /></Button>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -632,7 +682,7 @@ function UserForm({ onSave, initialData }: { onSave: (data: UserFormValues) => v
   const { toast } = useToast();
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
-    defaultValues: initialData || { name: '', email: '', role: 'customer' },
+    defaultValues: initialData ? { ...initialData, password: initialData.password || 'password123' } : { name: '', email: '', password: '', role: 'customer' },
   });
 
   function onSubmit(data: UserFormValues) {
@@ -672,6 +722,19 @@ function UserForm({ onSave, initialData }: { onSave: (data: UserFormValues) => v
         />
         <FormField
           control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name="role"
           render={({ field }) => (
             <FormItem>
@@ -697,5 +760,60 @@ function UserForm({ onSave, initialData }: { onSave: (data: UserFormValues) => v
     </Form>
   );
 }
+
+function PasswordRequestManagement() {
+    const { passwordResetRequests, users, resolvePasswordResetRequest } = useAppContext();
+    const { toast } = useToast();
+
+    const handleResolve = (request: PasswordResetRequest) => {
+        const newPassword = prompt(`Enter new password for ${request.userEmail}:`);
+        if (newPassword && newPassword.length >= 6) {
+            resolvePasswordResetRequest(request.requestId, newPassword);
+            toast({ title: 'Password Reset Successful', description: `Password for ${request.userEmail} has been changed.` });
+        } else if (newPassword) {
+            toast({ variant: 'destructive', title: 'Password Too Short', description: 'Password must be at least 6 characters.' });
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Password Reset Requests</CardTitle>
+                <CardDescription>Manage user requests to reset their password.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {passwordResetRequests.length === 0 ? (
+                    <p className="text-muted-foreground">No pending password reset requests.</p>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Request ID</TableHead>
+                                <TableHead>User Email</TableHead>
+                                <TableHead>Request Date</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {passwordResetRequests.map(req => (
+                                <TableRow key={req.requestId}>
+                                    <TableCell>{req.requestId}</TableCell>
+                                    <TableCell>{req.userEmail}</TableCell>
+                                    <TableCell>{new Date(req.date).toLocaleString()}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button size="sm" onClick={() => handleResolve(req)}>
+                                            <KeyRound className="mr-2 h-4 w-4" /> Reset Password
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+    
 
     

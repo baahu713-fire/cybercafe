@@ -112,9 +112,9 @@ export const foodItems: FoodItem[] = [
 ];
 
 export const mockUsers: User[] = [
-    { id: 'user1', name: 'Alice', email: 'alice@example.com', role: 'customer' },
-    { id: 'admin1', name: 'Bob', email: 'bob@example.com', role: 'admin' },
-    { id: 'superadmin1', name: 'Charlie', email: 'charlie@example.com', role: 'superadmin' },
+    { id: 'user1', name: 'Alice', email: 'alice@example.com', password: 'password123', role: 'customer' },
+    { id: 'admin1', name: 'Bob', email: 'bob@example.com', password: 'password123', role: 'admin' },
+    { id: 'superadmin1', name: 'Charlie', email: 'charlie@example.com', password: 'password123', role: 'superadmin' },
 ];
 
 export const userOrders: Order[] = [
@@ -152,3 +152,5 @@ export const userOrders: Order[] = [
         orderDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     }
 ];
+
+    
