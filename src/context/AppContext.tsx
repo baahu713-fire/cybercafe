@@ -44,8 +44,8 @@ interface AppContextType {
   addUser: (user: Omit<User, 'id' | 'password'> & { password?: string }) => void;
   updateUser: (user: User) => void;
   deleteUser: (userId: string) => void;
-  changePassword: (userId: string, newPassword: string) => void;
-  resetAllPasswords: (newPassword: string) => void;
+  changePassword: (userId: string) => void;
+  resetAllPasswords: () => void;
   requestPasswordReset: (email: string) => boolean;
   resolvePasswordResetRequest: (requestId: string, newPassword: string) => void;
   passwordResetRequests: PasswordResetRequest[];
@@ -287,15 +287,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "User Deleted", description: `User has been removed.`});
   }
 
-  const changePassword = (userId: string, newPassword: string) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword } : u));
+  const changePassword = (userId: string) => {
     const user = users.find(u => u.id === userId);
-    toast({ title: 'Password Changed', description: `Password for ${user?.name} has been updated.`});
+    if (!user) return;
+
+    const newPassword = prompt(`Enter the new password for ${user.name}:`);
+    if (newPassword && newPassword.length >= 6) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword } : u));
+        toast({ title: 'Password Changed', description: `Password for ${user.name} has been updated.`});
+    } else if (newPassword) {
+        toast({variant: 'destructive', title: 'Password must be at least 6 characters.'});
+    }
   };
 
-  const resetAllPasswords = (newPassword: string) => {
-      // Sets the same new password for every user.
-      setUsers(prev => prev.map(u => ({ ...u, password: newPassword })));
+  const resetAllPasswords = () => {
+    const newPassword = prompt('Enter the new password for ALL users:');
+    if (newPassword && newPassword.length >= 6) {
+        setUsers(prev => prev.map(u => ({ ...u, password: newPassword })));
+        toast({title: 'All passwords have been reset.'});
+    } else if (newPassword) {
+        toast({variant: 'destructive', title: 'Password must be at least 6 characters.'});
+    }
   };
 
   const requestPasswordReset = (email: string): boolean => {
@@ -316,7 +328,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const resolvePasswordResetRequest = (requestId: string, newPassword: string) => {
       const request = passwordResetRequests.find(r => r.requestId === requestId);
       if (request) {
-          changePassword(request.userId, newPassword);
+          setUsers(prev => prev.map(u => u.id === request.userId ? { ...u, password: newPassword } : u));
           setPasswordResetRequests(prev => prev.filter(r => r.requestId !== requestId));
       }
   };

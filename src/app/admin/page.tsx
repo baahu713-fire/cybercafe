@@ -514,7 +514,6 @@ function UserManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    const { toast } = useToast();
     
     const filteredUsers = users.filter(user => 
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -532,31 +531,6 @@ function UserManagement() {
         setIsFormOpen(true);
     }
     
-    const handleDelete = (userId: string) => {
-        deleteUser(userId);
-    }
-
-    const handleChangePassword = (userId: string) => {
-        const newPassword = prompt('Enter the new password:');
-        if (newPassword && newPassword.length >= 6) {
-            changePassword(userId, newPassword);
-            const user = users.find(u => u.id === userId);
-            toast({ title: 'Password Changed', description: `Password for ${user?.name} has been updated.`});
-        } else if (newPassword) {
-            toast({variant: 'destructive', title: 'Password must be at least 6 characters.'});
-        }
-    }
-
-    const handleResetAllPasswords = () => {
-        const newPassword = prompt('Enter the new password for ALL users:');
-        if (newPassword && newPassword.length >= 6) {
-            resetAllPasswords(newPassword);
-            toast({title: 'All passwords have been reset.'});
-        } else if (newPassword) {
-            toast({variant: 'destructive', title: 'Password must be at least 6 characters.'});
-        }
-    }
-
     const roleBadges: Record<UserRole, 'default' | 'destructive' | 'secondary'> = {
         superadmin: 'destructive',
         admin: 'default',
@@ -586,7 +560,7 @@ function UserManagement() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleResetAllPasswords}>Continue</AlertDialogAction>
+                                        <AlertDialogAction onClick={resetAllPasswords}>Continue</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
@@ -648,7 +622,7 @@ function UserManagement() {
                                     )}
                                     {currentUser?.role === 'superadmin' && user.id !== currentUser.id && (
                                         <>
-                                            <Button variant="ghost" size="icon" onClick={() => handleChangePassword(user.id)}><KeyRound className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => changePassword(user.id)}><KeyRound className="h-4 w-4" /></Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}><Edit className="h-4 w-4" /></Button>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
@@ -663,7 +637,7 @@ function UserManagement() {
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(user.id)}>Delete</AlertDialogAction>
+                                                    <AlertDialogAction onClick={() => deleteUser(user.id)}>Delete</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
