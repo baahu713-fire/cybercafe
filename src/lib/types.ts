@@ -31,3 +31,14 @@ export interface User {
   email: string;
   role: 'customer' | 'admin';
 }
+
+export interface Feedback {
+  id: string;
+  userId: string;
+  orderId: string;
+  rating: number; // 1-5 stars
+  comment?: string;
+  date: string;
+}
+
+    

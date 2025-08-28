@@ -1,12 +1,13 @@
 "use client";
 
-import type { OrderItem, Order, FoodItem, User } from '@/lib/types';
+import type { OrderItem, Order, FoodItem, User, OrderStatus, Feedback } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { foodItems, userOrders, mockUsers } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppContextType {
   currentUser: User | null;
+  users: User[];
   login: (email: string, password: string) => void;
   logout: () => void;
   register: (name: string, email: string, password: string) => void;
@@ -18,8 +19,14 @@ interface AppContextType {
   placeOrder: () => void;
   orders: Order[];
   settleBill: (orderId: string) => void;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  settleUserBills: (userId: string) => void;
   addFoodItem: (item: Omit<FoodItem, 'id'>) => void;
+  updateFoodItem: (item: FoodItem) => void;
+  deleteFoodItem: (itemId: string) => void;
   allFoodItems: FoodItem[];
+  submitFeedback: (feedback: Feedback) => void;
+  feedbacks: Feedback[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -31,6 +38,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentOrder, setCurrentOrder] = useState<OrderItem[]>([]);
   const [orders, setOrders] = useState<Order[]>(userOrders);
   const [allFoodItems, setAllFoodItems] = useState(foodItems);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
 
   useEffect(() => {
     // This is a mock persistence layer. In a real app, you'd use localStorage, cookies, or a server session.
@@ -146,27 +154,60 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const settleBill = (orderId: string) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? {...o, status: 'Settled'} : o));
+    updateOrderStatus(orderId, 'Settled');
     toast({
         title: "Bill Settled",
         description: `Order ${orderId} has been marked as settled.`,
     });
   };
   
+  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? {...o, status } : o));
+    toast({
+        title: "Order Updated",
+        description: `Order ${orderId} status changed to ${status}.`,
+    });
+  }
+  
+  const settleUserBills = (userId: string) => {
+    setOrders(prev => prev.map(o => (o.userId === userId && o.status !== 'Settled') ? {...o, status: 'Settled'} : o));
+    toast({ title: "User Bills Settled", description: `All outstanding bills for user ${userId} have been settled.` });
+  }
+
   const addFoodItem = (item: Omit<FoodItem, 'id'>) => {
     const newItem: FoodItem = {
       ...item,
-      id: `${allFoodItems.length + 1}`
+      id: `food${allFoodItems.length + 1}`,
+      ingredients: (item.ingredients as unknown as string).split(',').map(i => i.trim())
     };
     setAllFoodItems(prev => [newItem, ...prev]);
      toast({
         title: "Food Item Added",
-        description: `${item.name} has been added to the menu.`,
+        description: `${newItem.name} has been added to the menu.`,
     });
+  }
+  
+  const updateFoodItem = (item: FoodItem) => {
+    const updatedItem = {
+      ...item,
+      ingredients: Array.isArray(item.ingredients) ? item.ingredients : (item.ingredients as unknown as string).split(',').map(i => i.trim())
+    };
+    setAllFoodItems(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
+    toast({ title: "Food Item Updated", description: `${updatedItem.name} has been updated.` });
+  }
+  
+  const deleteFoodItem = (itemId: string) => {
+    setAllFoodItems(prev => prev.filter(i => i.id !== itemId));
+    toast({ title: "Food Item Deleted", description: "The food item has been removed from the menu." });
+  }
+  
+  const submitFeedback = (feedback: Feedback) => {
+    setFeedbacks(prev => [feedback, ...prev]);
+    console.log("New Feedback:", feedback);
   }
 
   return (
-    <AppContext.Provider value={{ currentUser, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, orders, settleBill, addFoodItem, allFoodItems }}>
+    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, submitFeedback, feedbacks }}>
       {children}
     </AppContext.Provider>
   );
@@ -179,3 +220,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
