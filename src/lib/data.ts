@@ -1,3 +1,4 @@
+
 import type { FoodItem, Order, User } from './types';
 
 export const foodCategories: string[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Beverages'];
