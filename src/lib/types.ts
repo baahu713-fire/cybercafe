@@ -1,16 +1,26 @@
+
+export type TimeOfDay = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snacks' | 'All Day';
+
+export interface Portion {
+  name: string;
+  price: number;
+}
+
 export interface FoodItem {
   id: string;
   name: string;
   description: string;
-  price: number;
   category: string;
   imageUrl: string;
   ingredients: string[];
   availability: boolean;
+  availableTimes: TimeOfDay[];
+  portions: Portion[];
 }
 
 export interface OrderItem {
   item: FoodItem;
+  portion: Portion;
   quantity: number;
 }
 

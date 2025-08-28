@@ -1,10 +1,20 @@
 
 "use client";
 
-import type { OrderItem, Order, FoodItem, User, OrderStatus, Feedback, UserRole } from '@/lib/types';
+import type { OrderItem, Order, FoodItem, User, OrderStatus, Feedback, UserRole, Portion, TimeOfDay } from '@/lib/types';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { foodItems, userOrders, mockUsers } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+
+// Helper function to determine the current time of day
+const getCurrentTimeOfDay = (): TimeOfDay => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Breakfast';
+    if (hour >= 12 && hour < 17) return 'Lunch';
+    if (hour >= 17 || hour < 5) return 'Dinner';
+    return 'All Day'; // Should not happen with current logic
+};
+
 
 interface AppContextType {
   currentUser: User | null;
@@ -13,9 +23,9 @@ interface AppContextType {
   logout: () => void;
   register: (name: string, email: string, password: string) => void;
   currentOrder: OrderItem[];
-  addToOrder: (item: OrderItem['item'], quantity?: number) => void;
-  removeFromOrder: (itemId: string) => void;
-  updateQuantity: (itemId: string, quantity: number) => void;
+  addToOrder: (item: FoodItem, portion: Portion, quantity?: number) => void;
+  removeFromOrder: (itemId: string, portionName: string) => void;
+  updateQuantity: (itemId: string, portionName: string, quantity: number) => void;
   clearOrder: () => void;
   placeOrder: (userId: string) => void;
   cancelOrder: (orderId: string) => void;
@@ -27,6 +37,7 @@ interface AppContextType {
   updateFoodItem: (item: FoodItem) => void;
   deleteFoodItem: (itemId: string) => void;
   allFoodItems: FoodItem[];
+  availableFoodItems: FoodItem[];
   submitFeedback: (feedback: Feedback) => void;
   feedbacks: Feedback[];
   addUser: (user: Omit<User, 'id'>) => void;
@@ -44,6 +55,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [orders, setOrders] = useState<Order[]>(userOrders);
   const [allFoodItems, setAllFoodItems] = useState(foodItems);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [currentTimeOfDay, setCurrentTimeOfDay] = useState<TimeOfDay>(getCurrentTimeOfDay());
 
   useEffect(() => {
     // This is a mock persistence layer. In a real app, you'd use localStorage, cookies, or a server session.
@@ -51,7 +63,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (loggedInUser) {
         setCurrentUser(JSON.parse(loggedInUser));
     }
+
+    // Update time of day periodically
+    const timer = setInterval(() => {
+        setCurrentTimeOfDay(getCurrentTimeOfDay());
+    }, 60000); // Check every minute
+    return () => clearInterval(timer);
   }, []);
+  
+  const availableFoodItems = allFoodItems.filter(item => 
+    item.availability && (item.availableTimes.includes('All Day') || item.availableTimes.includes(currentTimeOfDay))
+  );
 
   const login = (email: string, password: string) => {
     const user = users.find(u => u.email === email); // In a real app, you'd check the password hash
@@ -87,36 +109,36 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: 'Registration successful!', description: `Welcome, ${name}!` });
   };
 
-  const addToOrder = (item: OrderItem['item'], quantity: number = 1) => {
+  const addToOrder = (item: FoodItem, portion: Portion, quantity: number = 1) => {
     setCurrentOrder(prevOrder => {
-      const existingItem = prevOrder.find(orderItem => orderItem.item.id === item.id);
+      const existingItem = prevOrder.find(orderItem => orderItem.item.id === item.id && orderItem.portion.name === portion.name);
       if (existingItem) {
         return prevOrder.map(orderItem =>
-          orderItem.item.id === item.id
+          (orderItem.item.id === item.id && orderItem.portion.name === portion.name)
             ? { ...orderItem, quantity: orderItem.quantity + quantity }
             : orderItem
         );
       }
-      return [...prevOrder, { item, quantity }];
+      return [...prevOrder, { item, portion, quantity }];
     });
     toast({
         title: "Added to order",
-        description: `${item.name} has been added to your order.`,
+        description: `${item.name} (${portion.name}) has been added to your order.`,
     });
   };
 
-  const removeFromOrder = (itemId: string) => {
-    setCurrentOrder(prevOrder => prevOrder.filter(orderItem => orderItem.item.id !== itemId));
+  const removeFromOrder = (itemId: string, portionName: string) => {
+    setCurrentOrder(prevOrder => prevOrder.filter(orderItem => !(orderItem.item.id === itemId && orderItem.portion.name === portionName)));
   };
 
-  const updateQuantity = (itemId: string, quantity: number) => {
+  const updateQuantity = (itemId: string, portionName: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromOrder(itemId);
+      removeFromOrder(itemId, portionName);
       return;
     }
     setCurrentOrder(prevOrder =>
       prevOrder.map(orderItem =>
-        orderItem.item.id === itemId ? { ...orderItem, quantity } : orderItem
+        (orderItem.item.id === itemId && orderItem.portion.name === portionName) ? { ...orderItem, quantity } : orderItem
       )
     );
   };
@@ -135,7 +157,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const subtotal = currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0);
+    const subtotal = currentOrder.reduce((sum, { portion, quantity }) => sum + portion.price * quantity, 0);
     const total = subtotal * 1.05; // subtotal + 5% tax
 
     const newOrder: Order = {
@@ -255,7 +277,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, cancelOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, submitFeedback, feedbacks, addUser, updateUser, deleteUser }}>
+    <AppContext.Provider value={{ currentUser, users, login, logout, register, currentOrder, addToOrder, removeFromOrder, updateQuantity, clearOrder, placeOrder, cancelOrder, orders, settleBill, updateOrderStatus, settleUserBills, addFoodItem, updateFoodItem, deleteFoodItem, allFoodItems, availableFoodItems, submitFeedback, feedbacks, addUser, updateUser, deleteUser }}>
       {children}
     </AppContext.Provider>
   );

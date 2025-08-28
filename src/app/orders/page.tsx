@@ -101,14 +101,14 @@ export default function OrdersPage() {
                                 <AccordionContent className="p-4 pt-0">
                                     <h4 className="font-semibold mb-2">Order Details</h4>
                                     <div className="space-y-2">
-                                        {order.items.map(({ item, quantity }) => (
-                                            <div key={item.id} className="flex justify-between items-center">
+                                        {order.items.map(({ item, portion, quantity }) => (
+                                            <div key={`${item.id}-${portion.name}`} className="flex justify-between items-center">
                                                 <div className="flex items-center gap-2">
                                                     <Image src={item.imageUrl} alt={item.name} width={40} height={40} className="rounded-sm object-cover" data-ai-hint="food item" />
-                                                    <span>{item.name}</span>
+                                                    <span>{item.name} <span className="text-xs text-muted-foreground">({portion.name})</span></span>
                                                 </div>
                                                 <span className="text-muted-foreground">x{quantity}</span>
-                                                <span>₹{(item.price * quantity).toFixed(2)}</span>
+                                                <span>₹{(portion.price * quantity).toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>

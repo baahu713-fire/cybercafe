@@ -8,27 +8,35 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlusCircle, Search, List, LayoutGrid } from 'lucide-react';
-import type { FoodItem } from '@/lib/types';
+import type { FoodItem, Portion } from '@/lib/types';
 import { useAppContext } from '@/context/AppContext';
 import { foodCategories } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Label } from './ui/label';
 
 export default function FoodMenu() {
-  const { allFoodItems, addToOrder } = useAppContext();
+  const { availableFoodItems, addToOrder } = useAppContext();
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const categoryFilteredItems = activeCategory === 'All'
-    ? allFoodItems
-    : allFoodItems.filter(item => item.category === activeCategory);
+    ? availableFoodItems
+    : availableFoodItems.filter(item => item.category === activeCategory);
 
   const filteredItems = categoryFilteredItems.filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleAddToOrder = (item: FoodItem, portion: Portion, quantity: number) => {
+    addToOrder(item, portion, quantity);
+  };
+
 
   return (
     <div>
@@ -73,8 +81,8 @@ export default function FoodMenu() {
       )}>
         {filteredItems.map((item, index) => (
             viewMode === 'grid' 
-            ? <FoodItemCard key={item.id} item={item} onAddToOrder={() => addToOrder(item)} />
-            : <FoodItemList key={item.id} item={item} onAddToOrder={() => addToOrder(item)} isLast={index === filteredItems.length - 1} />
+            ? <FoodItemCard key={item.id} item={item} onAddToOrder={handleAddToOrder} />
+            : <FoodItemList key={item.id} item={item} onAddToOrder={handleAddToOrder} isLast={index === filteredItems.length - 1} />
         ))}
         {filteredItems.length === 0 && (
           <p className="text-muted-foreground col-span-full text-center">No items found.</p>
@@ -84,7 +92,57 @@ export default function FoodMenu() {
   );
 }
 
-function FoodItemCard({ item, onAddToOrder }: { item: FoodItem, onAddToOrder: () => void }) {
+function AddToOrderButton({ item, onAddToOrder }: { item: FoodItem; onAddToOrder: (item: FoodItem, portion: Portion, quantity: number) => void }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectedPortion, setSelectedPortion] = useState<Portion | null>(item.portions.length === 1 ? item.portions[0] : null);
+
+    const handleButtonClick = () => {
+        if (item.portions.length === 1) {
+            onAddToOrder(item, item.portions[0], 1);
+        } else {
+            setIsOpen(true);
+        }
+    };
+    
+    const handleConfirm = () => {
+        if(selectedPortion) {
+            onAddToOrder(item, selectedPortion, 1);
+            setIsOpen(false);
+            setSelectedPortion(item.portions.length === 1 ? item.portions[0] : null);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <Button size="sm" onClick={handleButtonClick} disabled={!item.availability}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add
+            </Button>
+            {item.portions.length > 1 && (
+                 <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Select a portion for {item.name}</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <RadioGroup onValueChange={(value) => setSelectedPortion(JSON.parse(value))}>
+                            {item.portions.map(portion => (
+                                <div key={portion.name} className="flex items-center space-x-2">
+                                    <RadioGroupItem value={JSON.stringify(portion)} id={`${item.id}-${portion.name}`} />
+                                    <Label htmlFor={`${item.id}-${portion.name}`} className="flex-grow">
+                                        {portion.name} - ₹{portion.price.toFixed(2)}
+                                    </Label>
+                                </div>
+                            ))}
+                        </RadioGroup>
+                    </div>
+                    <Button onClick={handleConfirm} disabled={!selectedPortion}>Add to Order</Button>
+                </DialogContent>
+            )}
+        </Dialog>
+    );
+}
+
+function FoodItemCard({ item, onAddToOrder }: { item: FoodItem, onAddToOrder: (item: FoodItem, portion: Portion, quantity: number) => void }) {
   return (
     <Card className="flex flex-col overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out shadow-lg hover:shadow-2xl">
       <CardHeader className="p-0 relative">
@@ -105,17 +163,14 @@ function FoodItemCard({ item, onAddToOrder }: { item: FoodItem, onAddToOrder: ()
         <CardDescription className="text-sm h-10 overflow-hidden">{item.description}</CardDescription>
       </CardContent>
       <CardFooter className="p-4 flex justify-between items-center mt-auto">
-        <p className="text-lg font-bold text-primary">₹{item.price.toFixed(2)}</p>
-        <Button size="sm" onClick={onAddToOrder} disabled={!item.availability}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add
-        </Button>
+        <p className="text-lg font-bold text-primary">₹{item.portions[0].price.toFixed(2)}</p>
+        <AddToOrderButton item={item} onAddToOrder={onAddToOrder} />
       </CardFooter>
     </Card>
   );
 }
 
-function FoodItemList({ item, onAddToOrder, isLast }: { item: FoodItem, onAddToOrder: () => void, isLast: boolean }) {
+function FoodItemList({ item, onAddToOrder, isLast }: { item: FoodItem, onAddToOrder: (item: FoodItem, portion: Portion, quantity: number) => void, isLast: boolean }) {
     return (
         <>
             <div className="flex items-center gap-4 py-4">
@@ -130,7 +185,7 @@ function FoodItemList({ item, onAddToOrder, isLast }: { item: FoodItem, onAddToO
                 <div className="flex-grow">
                      <div className="flex justify-between items-start">
                         <CardTitle className="text-lg font-headline mb-1">{item.name}</CardTitle>
-                        <p className="text-lg font-bold text-primary whitespace-nowrap">₹{item.price.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-primary whitespace-nowrap">₹{item.portions[0].price.toFixed(2)}</p>
                      </div>
                     <CardDescription className="text-sm mb-2">{item.description}</CardDescription>
                     {!item.availability && (
@@ -138,10 +193,7 @@ function FoodItemList({ item, onAddToOrder, isLast }: { item: FoodItem, onAddToO
                     )}
                 </div>
                 <div className="self-center ml-4">
-                    <Button size="sm" onClick={onAddToOrder} disabled={!item.availability}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add
-                    </Button>
+                     <AddToOrderButton item={item} onAddToOrder={onAddToOrder} />
                 </div>
             </div>
             {!isLast && <Separator />}

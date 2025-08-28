@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { foodCategories } from '@/lib/data';
-import type { FoodItem, Order, OrderStatus, User, UserRole } from '@/lib/types';
+import type { FoodItem, Order, OrderStatus, User, UserRole, Portion, TimeOfDay } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useState } from 'react';
@@ -27,16 +27,23 @@ import { Calendar } from '@/components/ui/calendar';
 import { addDays, format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
+const portionSchema = z.object({
+    name: z.string().min(1, 'Portion name is required.'),
+    price: z.coerce.number().min(0.01, 'Price must be positive.'),
+});
 
 const foodItemSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, 'Name is too short.'),
   description: z.string().min(10, 'Description is too short.'),
-  price: z.coerce.number().min(0.01, 'Price must be positive.'),
   category: z.string().min(1, 'Category is required.'),
   imageUrl: z.string().url('Must be a valid URL.'),
   ingredients: z.string().min(3, 'Ingredients are required.'),
   availability: z.boolean().default(true),
+  availableTimes: z.array(z.string()).nonempty('At least one availability time is required.'),
+  portions: z.array(portionSchema).nonempty('At least one portion is required.'),
 });
 
 const userSchema = z.object({
@@ -253,12 +260,6 @@ function ItemManagement() {
         setEditingItem(null);
         setIsFormOpen(true);
     }
-
-    const handleDelete = (itemId: string) => {
-        if(confirm('Are you sure you want to delete this item?')) {
-            deleteFoodItem(itemId);
-        }
-    }
     
     return (
         <Card>
@@ -316,11 +317,27 @@ function ItemManagement() {
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.category}</TableCell>
-                                <TableCell>₹{item.price.toFixed(2)}</TableCell>
+                                <TableCell>₹{item.portions[0].price.toFixed(2)}</TableCell>
                                 <TableCell><Badge variant={item.availability ? 'default' : 'secondary'}>{item.availability ? 'Yes' : 'No'}</Badge></TableCell>
                                 <TableCell className="text-right space-x-2">
                                     <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}><Edit className="h-4 w-4" /></Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the food item.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => deleteFoodItem(item.id)}>Continue</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -341,11 +358,12 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
         } : {
             name: '',
             description: '',
-            price: 0,
             category: '',
             imageUrl: 'https://picsum.photos/600/400',
             ingredients: '',
-            availability: true
+            availability: true,
+            availableTimes: [],
+            portions: [{ name: 'Full', price: 0 }]
         }
     });
 
@@ -364,23 +382,18 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
                 <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="e.g., A delicious veggie burger..." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="price" render={({ field }) => (
-                        <FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="category" render={({ field }) => (
-                       <FormItem>
-                         <FormLabel>Category</FormLabel>
-                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {foodCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                         <FormMessage />
-                       </FormItem>
-                    )} />
-                </div>
+                 <FormField control={form.control} name="category" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            {foodCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                 )} />
                 <FormField control={form.control} name="imageUrl" render={({ field }) => (
                     <FormItem><FormLabel>Image URL</FormLabel><FormControl><Input placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />

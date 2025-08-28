@@ -20,7 +20,7 @@ export default function OrderSummary() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const subtotal = currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0);
+  const subtotal = currentOrder.reduce((sum, { item, portion, quantity }) => sum + portion.price * quantity, 0);
   const taxes = subtotal * 0.05; // 5% tax
   const total = subtotal + taxes;
 
@@ -70,22 +70,22 @@ export default function OrderSummary() {
           <>
             <ScrollArea className="h-[300px] pr-4 -mr-4">
               <div className="space-y-4">
-                {currentOrder.map(({ item, quantity }) => (
-                  <div key={item.id} className="flex items-center gap-4">
+                {currentOrder.map(({ item, portion, quantity }) => (
+                  <div key={`${item.id}-${portion.name}`} className="flex items-center gap-4">
                     <Image src={item.imageUrl} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={`${item.category.toLowerCase()} food`} />
                     <div className="flex-grow">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
+                      <p className="font-semibold">{item.name} <span className="text-xs text-muted-foreground">({portion.name})</span></p>
+                      <p className="text-sm text-muted-foreground">₹{portion.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, quantity - 1)}>
+                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, portion.name, quantity - 1)}>
                         <Minus className="h-4 w-4" />
                       </Button>
                       <span>{quantity}</span>
-                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, quantity + 1)}>
+                      <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, portion.name, quantity + 1)}>
                         <Plus className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeFromOrder(item.id)}>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeFromOrder(item.id, portion.name)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
