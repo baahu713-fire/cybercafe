@@ -11,8 +11,9 @@ const getCurrentTimeOfDay = (): TimeOfDay => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return 'Breakfast';
     if (hour >= 12 && hour < 17) return 'Lunch';
-    if (hour >= 17 || hour < 5) return 'Dinner';
-    return 'All Day'; // Should not happen with current logic
+    if (hour >= 17 && hour < 22) return 'Dinner';
+    if (hour >= 22 || hour < 5) return 'Snacks'; // Assuming snacks are late night
+    return 'All Day'; // Fallback
 };
 
 
@@ -227,7 +228,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addFoodItem = (item: Omit<FoodItem, 'id'>) => {
     const newItem: FoodItem = {
       ...item,
-      id: `food${allFoodItems.length + 1}`,
+      id: `food${allFoodItems.length + 1 + Math.random()}`,
       ingredients: (item.ingredients as unknown as string).split(',').map(i => i.trim())
     };
     setAllFoodItems(prev => [newItem, ...prev]);
@@ -253,7 +254,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   const submitFeedback = (feedback: Feedback) => {
     setFeedbacks(prev => [feedback, ...prev]);
-    console.log("New Feedback:", feedback);
   }
 
   const addUser = (user: Omit<User, 'id'>) => {
@@ -290,3 +290,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    

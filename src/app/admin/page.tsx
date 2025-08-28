@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAppContext } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription as FormDescriptionComponent, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,12 +19,12 @@ import type { FoodItem, Order, OrderStatus, User, UserRole, Portion, TimeOfDay }
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useState } from 'react';
-import { Edit, Trash2, Search, ArrowUpDown, PlusCircle } from 'lucide-react';
+import { Edit, Trash2, Search, ArrowUpDown, PlusCircle, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
-import { addDays, format } from 'date-fns';
+import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -34,6 +34,8 @@ const portionSchema = z.object({
     price: z.coerce.number().min(0.01, 'Price must be positive.'),
 });
 
+const timeOfDaySchema = z.enum(['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'All Day']);
+
 const foodItemSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, 'Name is too short.'),
@@ -42,7 +44,7 @@ const foodItemSchema = z.object({
   imageUrl: z.string().url('Must be a valid URL.'),
   ingredients: z.string().min(3, 'Ingredients are required.'),
   availability: z.boolean().default(true),
-  availableTimes: z.array(z.string()).nonempty('At least one availability time is required.'),
+  availableTimes: z.array(timeOfDaySchema).nonempty('At least one availability time is required.'),
   portions: z.array(portionSchema).nonempty('At least one portion is required.'),
 });
 
@@ -119,9 +121,9 @@ function OrderManagement() {
             order.status.toLowerCase().includes(searchTerm.toLowerCase());
         
         const matchesDate = 
-            !date || (
-                new Date(order.orderDate) >= (date.from || new Date(0)) &&
-                new Date(order.orderDate) <= (date.to || new Date())
+            !date || !date.from || (
+                new Date(order.orderDate) >= date.from &&
+                new Date(order.orderDate) <= (date.to || new Date(date.from.getTime() + 24 * 60 * 60 * 1000 -1)) // if only from is selected, check for that day
             );
 
         return matchesSearch && matchesDate;
@@ -216,7 +218,7 @@ function OrderManagement() {
                                     <Select 
                                         onValueChange={(value) => updateOrderStatus(order.id, value as OrderStatus)} 
                                         defaultValue={order.status}
-                                        disabled={order.status === 'Settled'}
+                                        disabled={order.status === 'Settled' || order.status === 'Cancelled'}
                                     >
                                         <SelectTrigger className="w-[120px]">
                                             <SelectValue />
@@ -273,7 +275,7 @@ function ItemManagement() {
                         <DialogTrigger asChild>
                             <Button onClick={handleAddNew}>Add New Item</Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>{editingItem ? 'Edit' : 'Add'} Food Item</DialogTitle>
                             </DialogHeader>
@@ -348,6 +350,8 @@ function ItemManagement() {
     );
 }
 
+const availableTimes: TimeOfDay[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'All Day'];
+
 function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValues) => void, initialData: FoodItem | null }) {
     const { toast } = useToast();
     const form = useForm<FoodItemFormValues>({
@@ -367,10 +371,14 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
         }
     });
 
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "portions"
+    });
+
     function onSubmit(data: FoodItemFormValues) {
         onSave(data);
         toast({ title: `Item ${initialData ? 'updated' : 'added'} successfully!`});
-        form.reset();
     }
     
     return (
@@ -400,6 +408,83 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
                 <FormField control={form.control} name="ingredients" render={({ field }) => (
                     <FormItem><FormLabel>Ingredients (comma-separated)</FormLabel><FormControl><Input placeholder="e.g., Patty, Bun, Lettuce" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
+
+                <div>
+                    <FormLabel>Portions</FormLabel>
+                    <div className="space-y-2 mt-2">
+                        {fields.map((field, index) => (
+                            <div key={field.id} className="flex items-center gap-2">
+                                <FormField
+                                    control={form.control}
+                                    name={`portions.${index}.name`}
+                                    render={({ field }) => <Input placeholder="Portion Name" {...field} />}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`portions.${index}.price`}
+                                    render={({ field }) => <Input type="number" placeholder="Price" {...field} />}
+                                />
+                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                                    <X className="h-4 w-4 text-destructive"/>
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ name: '', price: 0 })}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Portion
+                    </Button>
+                    <FormMessage>{form.formState.errors.portions?.message || form.formState.errors.portions?.root?.message}</FormMessage>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="availableTimes"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-4">
+                        <FormLabel>Available Times</FormLabel>
+                        <FormDescriptionComponent>
+                          Select the times of day this item is available.
+                        </FormDescriptionComponent>
+                      </div>
+                      {availableTimes.map((time) => (
+                        <FormField
+                          key={time}
+                          control={form.control}
+                          name="availableTimes"
+                          render={({ field }) => {
+                            return (
+                              <FormItem
+                                key={time}
+                                className="flex flex-row items-start space-x-3 space-y-0"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(time)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, time])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== time
+                                            )
+                                          )
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {time}
+                                </FormLabel>
+                              </FormItem>
+                            )
+                          }}
+                        />
+                      ))}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField control={form.control} name="availability" render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
@@ -408,6 +493,7 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
                         </div>
                     </FormItem>
                 )} />
+
                 <Button type="submit">Save Item</Button>
             </form>
         </Form>
@@ -437,9 +523,7 @@ function UserManagement() {
     }
     
     const handleDelete = (userId: string) => {
-        if(confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            deleteUser(userId);
-        }
+        deleteUser(userId);
     }
 
     const roleBadges: Record<UserRole, 'default' | 'destructive' | 'secondary'> = {
@@ -515,7 +599,23 @@ function UserManagement() {
                                     {currentUser?.role === 'superadmin' && user.id !== currentUser.id && (
                                         <>
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}><Edit className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(user.id)}><Trash2 className="h-4 w-4" /></Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will permanently delete the user. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(user.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </>
                                     )}
                                 </TableCell>
@@ -597,3 +697,5 @@ function UserForm({ onSave, initialData }: { onSave: (data: UserFormValues) => v
     </Form>
   );
 }
+
+    
