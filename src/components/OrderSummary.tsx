@@ -20,7 +20,7 @@ export default function OrderSummary() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const subtotal = currentOrder.reduce((sum, { item, quantity }) => sum + item.price * quantity, 0);
-  const taxes = subtotal * 0.08;
+  const taxes = subtotal * 0.05; // 5% tax
   const total = subtotal + taxes;
 
   const handlePlaceOrder = () => {
@@ -74,7 +74,7 @@ export default function OrderSummary() {
                     <Image src={item.imageUrl} alt={item.name} width={64} height={64} className="rounded-md object-cover" data-ai-hint={`${item.category.toLowerCase()} food`} />
                     <div className="flex-grow">
                       <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateQuantity(item.id, quantity - 1)}>
@@ -94,10 +94,10 @@ export default function OrderSummary() {
             </ScrollArea>
             <Separator className="my-4" />
             <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Taxes (8%)</span><span>${taxes.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Taxes (5%)</span><span>₹{taxes.toFixed(2)}</span></div>
                 <Separator/>
-                <div className="flex justify-between font-bold text-base"><span>Total</span><span>${total.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-base"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
             </div>
           </>
         )}
@@ -108,7 +108,7 @@ export default function OrderSummary() {
               <Button asChild className="w-full">
                 <Link href="/login">Login to Place Order</Link>
               </Button>
-            ) : currentUser.role === 'admin' ? (
+            ) : currentUser.role === 'admin' || currentUser.role === 'superadmin' ? (
                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
                          <Button className="w-full">

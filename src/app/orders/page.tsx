@@ -59,7 +59,7 @@ export default function OrdersPage() {
                                             <p className="text-sm text-muted-foreground">{new Date(order.orderDate).toLocaleString()}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-bold">${order.total.toFixed(2)}</p>
+                                            <p className="font-bold">₹{order.total.toFixed(2)}</p>
                                             <Badge variant={statusVariants[order.status]}>{order.status}</Badge>
                                         </div>
                                     </div>
@@ -74,7 +74,7 @@ export default function OrdersPage() {
                                                     <span>{item.name}</span>
                                                 </div>
                                                 <span className="text-muted-foreground">x{quantity}</span>
-                                                <span>${(item.price * quantity).toFixed(2)}</span>
+                                                <span>₹{(item.price * quantity).toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>

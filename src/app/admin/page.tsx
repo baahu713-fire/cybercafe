@@ -203,7 +203,7 @@ function OrderManagement() {
                                 <TableCell className="font-medium">{order.id}</TableCell>
                                 <TableCell>{order.userId}</TableCell>
                                 <TableCell>{new Date(order.orderDate).toLocaleString()}</TableCell>
-                                <TableCell>${order.total.toFixed(2)}</TableCell>
+                                <TableCell>₹{order.total.toFixed(2)}</TableCell>
                                 <TableCell>
                                     <Select 
                                         onValueChange={(value) => updateOrderStatus(order.id, value as OrderStatus)} 
@@ -315,7 +315,7 @@ function ItemManagement() {
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
                                 <TableCell>{item.category}</TableCell>
-                                <TableCell>${item.price.toFixed(2)}</TableCell>
+                                <TableCell>₹{item.price.toFixed(2)}</TableCell>
                                 <TableCell><Badge variant={item.availability ? 'default' : 'secondary'}>{item.availability ? 'Yes' : 'No'}</Badge></TableCell>
                                 <TableCell className="text-right space-x-2">
                                     <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}><Edit className="h-4 w-4" /></Button>
