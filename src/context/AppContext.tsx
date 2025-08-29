@@ -61,7 +61,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [orders, setOrders] = useState<Order[]>(userOrders);
   const [allFoodItems, setAllFoodItems] = useState(foodItems);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
-  const [currentTimeOfDay, setCurrentTimeOfDay] = useState<TimeOfDay>(getCurrentTimeOfDay());
+  const [currentTimeOfDay, setCurrentTimeOfDay] = useState<TimeOfDay | null>(null);
   const [passwordResetRequests, setPasswordResetRequests] = useState<PasswordResetRequest[]>([]);
 
 
@@ -72,6 +72,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(JSON.parse(loggedInUser));
     }
 
+    // Set time of day on the client to avoid hydration mismatch
+    setCurrentTimeOfDay(getCurrentTimeOfDay());
+
     // Update time of day periodically
     const timer = setInterval(() => {
         setCurrentTimeOfDay(getCurrentTimeOfDay());
@@ -80,7 +83,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const availableFoodItems = allFoodItems.filter(item => 
-    item.availability && (item.availableTimes.includes('All Day') || item.availableTimes.includes(currentTimeOfDay))
+    item.availability && (
+        !currentTimeOfDay || // Render all items on server / before hydration
+        item.availableTimes.includes('All Day') || 
+        item.availableTimes.includes(currentTimeOfDay)
+    )
   );
 
   const login = (email: string, password: string): boolean => {
