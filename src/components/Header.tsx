@@ -42,7 +42,7 @@ export default function Header() {
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           <NavLink href="/">Menu</NavLink>
-          {isCustomer && <NavLink href="/orders">My Orders</NavLink>}
+          {currentUser && <NavLink href="/orders">My Orders</NavLink>}
           {isCustomer && <NavLink href="/feedback">Feedback</NavLink>}
           {isAdmin && <NavLink href="/admin">Admin</NavLink>}
         </nav>
@@ -89,7 +89,7 @@ export default function Header() {
             <SheetContent side="right">
               <nav className="flex flex-col gap-4 mt-8 text-lg">
                 <NavLink href="/">Menu</NavLink>
-                {isCustomer && <NavLink href="/orders">My Orders</NavLink>}
+                {currentUser && <NavLink href="/orders">My Orders</NavLink>}
                 {isCustomer && <NavLink href="/feedback">Feedback</NavLink>}
                 {isAdmin && <NavLink href="/admin">Admin</NavLink>}
                 <div className="border-t pt-4 mt-2 flex flex-col gap-2">
