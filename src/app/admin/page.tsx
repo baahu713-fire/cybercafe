@@ -41,7 +41,7 @@ const foodItemSchema = z.object({
   name: z.string().min(2, 'Name is too short.'),
   description: z.string().min(10, 'Description is too short.'),
   category: z.string().min(1, 'Category is required.'),
-  imageUrl: z.string().url('Must be a valid URL.'),
+  imageUrl: z.string(),
   ingredients: z.string().min(3, 'Ingredients are required.'),
   availability: z.boolean().default(true),
   availableTimes: z.array(timeOfDaySchema).nonempty('At least one availability time is required.'),
@@ -372,7 +372,7 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
             name: '',
             description: '',
             category: '',
-            imageUrl: 'https://picsum.photos/600/400',
+            imageUrl: '/images/placeholder.jpg',
             ingredients: '',
             availability: true,
             availableTimes: [],
@@ -412,7 +412,7 @@ function FoodItemForm({ onSave, initialData }: { onSave: (data: FoodItemFormValu
                     </FormItem>
                  )} />
                 <FormField control={form.control} name="imageUrl" render={({ field }) => (
-                    <FormItem><FormLabel>Image URL</FormLabel><FormControl><Input placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Image Path</FormLabel><FormControl><Input placeholder="/images/your-image.jpg" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="ingredients" render={({ field }) => (
                     <FormItem><FormLabel>Ingredients (comma-separated)</FormLabel><FormControl><Input placeholder="e.g., Patty, Bun, Lettuce" {...field} /></FormControl><FormMessage /></FormItem>
@@ -796,3 +796,4 @@ function PasswordRequestManagement() {
     
 
     
+
