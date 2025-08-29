@@ -22,10 +22,16 @@ const statusVariants: Record<OrderStatus, "default" | "secondary" | "destructive
 }
 
 function CancelOrderButton({ order }: { order: Order }) {
-    const { cancelOrder } = useAppContext();
+    const { cancelOrder, currentUser } = useAppContext();
     const [canCancel, setCanCancel] = useState(false);
 
     useEffect(() => {
+        // Only customers should have the cancel option, not admins
+        if (currentUser?.role !== 'customer') {
+            setCanCancel(false);
+            return;
+        }
+
         const orderDate = new Date(order.orderDate);
         const now = new Date();
         const diffInSeconds = (now.getTime() - orderDate.getTime()) / 1000;
@@ -37,7 +43,7 @@ function CancelOrderButton({ order }: { order: Order }) {
             }, (60 - diffInSeconds) * 1000);
             return () => clearTimeout(timer);
         }
-    }, [order]);
+    }, [order, currentUser]);
 
     if (!canCancel) return null;
 
@@ -55,12 +61,20 @@ function CancelOrderButton({ order }: { order: Order }) {
 
 
 export default function OrdersPage() {
-    const { currentUser, orders } = useAppContext();
+    const { currentUser, orders, users } = useAppContext();
     const [userOrders, setUserOrders] = useState<Order[]>([]);
+    
+    const getUserName = (userId: string) => users.find(u => u.id === userId)?.name || 'Unknown User';
 
     useEffect(() => {
         if(currentUser) {
-            setUserOrders(orders.filter(o => o.userId === currentUser.id));
+            if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+                // Admins/Superadmins see all orders
+                setUserOrders(orders);
+            } else {
+                // Customers see only their orders
+                setUserOrders(orders.filter(o => o.userId === currentUser.id));
+            }
         }
     }, [currentUser, orders]);
 
@@ -75,11 +89,13 @@ export default function OrdersPage() {
             </div>
         );
     }
+    
+    const isAdminView = currentUser.role === 'admin' || currentUser.role === 'superadmin';
 
     return (
         <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl font-bold font-headline mb-2">Your Orders</h1>
-            <p className="text-muted-foreground mb-6">Track your past and current orders.</p>
+            <h1 className="text-4xl font-bold font-headline mb-2">{isAdminView ? 'All Customer Orders' : 'Your Orders'}</h1>
+            <p className="text-muted-foreground mb-6">{isAdminView ? 'Review and track all orders placed in the system.' : 'Track your past and current orders.'}</p>
             {userOrders.length === 0 ? (
                 <p>You haven't placed any orders yet.</p>
             ) : (
@@ -91,6 +107,7 @@ export default function OrdersPage() {
                                     <div className="flex justify-between items-center w-full">
                                         <div className="text-left">
                                             <p className="font-bold">Order #{order.id}</p>
+                                            {isAdminView && <p className="text-sm font-medium">For: {getUserName(order.userId)}</p>}
                                             <p className="text-sm text-muted-foreground">{new Date(order.orderDate).toLocaleString()}</p>
                                         </div>
                                         <div className="text-right">
