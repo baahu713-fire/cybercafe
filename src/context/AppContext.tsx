@@ -28,7 +28,7 @@ interface AppContextType {
   removeFromOrder: (itemId: string, portionName: string) => void;
   updateQuantity: (itemId: string, portionName: string, quantity: number) => void;
   clearOrder: () => void;
-  placeOrder: (userId: string) => void;
+  placeOrder: (userId: string, instructions?: string) => void;
   cancelOrder: (orderId: string) => void;
   orders: Order[];
   settleBill: (orderId: string) => void;
@@ -166,7 +166,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setCurrentOrder([]);
   };
 
-  const placeOrder = (userId: string) => {
+  const placeOrder = (userId: string, instructions?: string) => {
     if (currentOrder.length === 0) {
       toast({
           variant: "destructive",
@@ -186,6 +186,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       status: 'Pending',
       orderDate: new Date().toISOString(),
       userId: userId,
+      instructions: instructions,
     };
     setOrders(prev => [newOrder, ...prev]);
     clearOrder();

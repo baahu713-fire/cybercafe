@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Order } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
 
 const statusVariants: Record<OrderStatus, "default" | "secondary" | "destructive" | "outline"> = {
     Pending: 'secondary',
@@ -45,7 +46,7 @@ function CancelOrderButton({ order }: { order: Order }) {
             variant="destructive"
             size="sm"
             onClick={() => cancelOrder(order.id)}
-            className="mt-2"
+            className="mt-4"
         >
             Cancel Order
         </Button>
@@ -112,6 +113,13 @@ export default function OrdersPage() {
                                             </div>
                                         ))}
                                     </div>
+                                    {order.instructions && (
+                                        <>
+                                            <Separator className="my-4"/>
+                                            <h4 className="font-semibold mb-1">Special Instructions</h4>
+                                            <p className="text-sm text-muted-foreground">{order.instructions}</p>
+                                        </>
+                                    )}
                                     <CancelOrderButton order={order} />
                                 </AccordionContent>
                             </AccordionItem>

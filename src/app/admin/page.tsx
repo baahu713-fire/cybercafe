@@ -19,7 +19,7 @@ import type { FoodItem, Order, OrderStatus, User, UserRole, Portion, TimeOfDay, 
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useState } from 'react';
-import { Edit, Trash2, Search, ArrowUpDown, PlusCircle, X, KeyRound } from 'lucide-react';
+import { Edit, Trash2, Search, ArrowUpDown, PlusCircle, X, KeyRound, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const portionSchema = z.object({
     name: z.string().min(1, 'Portion name is required.'),
@@ -237,7 +238,21 @@ function OrderManagement() {
                                         </SelectContent>
                                     </Select>
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-right space-x-2">
+                                     {order.instructions && (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MessageSquare className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p className="max-w-xs">{order.instructions}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
                                     {order.status === 'Delivered' && (
                                         <Button size="sm" onClick={() => settleBill(order.id)}>Settle Bill</Button>
                                     )}
@@ -789,11 +804,3 @@ function PasswordRequestManagement() {
         </Card>
     );
 }
-    
-
-    
-
-    
-
-    
-

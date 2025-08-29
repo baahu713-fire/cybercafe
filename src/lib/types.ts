@@ -33,6 +33,7 @@ export interface Order {
   status: OrderStatus;
   orderDate: string;
   userId: string;
+  instructions?: string;
 }
 
 export type UserRole = 'customer' | 'admin' | 'superadmin';
@@ -60,5 +61,3 @@ export interface PasswordResetRequest {
   userEmail: string;
   date: string;
 }
-
-    

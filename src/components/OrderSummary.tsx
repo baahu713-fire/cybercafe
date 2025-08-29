@@ -13,12 +13,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
 
 export default function OrderSummary() {
   const { currentUser, users, currentOrder, removeFromOrder, updateQuantity, placeOrder } = useAppContext();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [instructions, setInstructions] = useState('');
 
   const subtotal = currentOrder.reduce((sum, { item, portion, quantity }) => sum + portion.price * quantity, 0);
   const taxes = subtotal * 0.05; // 5% tax
@@ -33,7 +36,8 @@ export default function OrderSummary() {
       });
       return;
     }
-    placeOrder(currentUser.id);
+    placeOrder(currentUser.id, instructions);
+    setInstructions('');
   };
 
   const handleAdminPlaceOrder = () => {
@@ -45,9 +49,10 @@ export default function OrderSummary() {
             });
             return;
       }
-      placeOrder(selectedUserId);
+      placeOrder(selectedUserId, instructions);
       setIsDialogOpen(false);
       setSelectedUserId(null);
+      setInstructions('');
   }
 
   const customerUsers = users.filter(u => u.role === 'customer');
@@ -94,11 +99,20 @@ export default function OrderSummary() {
               </div>
             </ScrollArea>
             <Separator className="my-4" />
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2">
                 <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>Taxes (5%)</span><span>₹{taxes.toFixed(2)}</span></div>
                 <Separator/>
                 <div className="flex justify-between font-bold text-base"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
+            </div>
+            <div className="mt-4 space-y-2">
+                <Label htmlFor="instructions">Special Instructions</Label>
+                <Textarea 
+                    id="instructions"
+                    placeholder="e.g., Make it extra spicy, no onions..." 
+                    value={instructions}
+                    onChange={(e) => setInstructions(e.target.value)}
+                />
             </div>
           </>
         )}
