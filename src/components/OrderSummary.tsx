@@ -23,9 +23,7 @@ export default function OrderSummary() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [instructions, setInstructions] = useState('');
 
-  const subtotal = currentOrder.reduce((sum, { item, portion, quantity }) => sum + portion.price * quantity, 0);
-  const taxes = subtotal * 0.05; // 5% tax
-  const total = subtotal + taxes;
+  const total = currentOrder.reduce((sum, { item, portion, quantity }) => sum + portion.price * quantity, 0);
 
   const handlePlaceOrder = () => {
     if (!currentUser) {
@@ -100,10 +98,7 @@ export default function OrderSummary() {
             </ScrollArea>
             <Separator className="my-4" />
             <div className="space-y-2">
-                <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Taxes (5%)</span><span>₹{taxes.toFixed(2)}</span></div>
-                <Separator/>
-                <div className="flex justify-between font-bold text-base"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-lg"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
             </div>
             <div className="mt-4 space-y-2">
                 <Label htmlFor="instructions">Special Instructions</Label>

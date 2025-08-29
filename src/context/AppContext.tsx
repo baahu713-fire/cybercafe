@@ -176,8 +176,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const subtotal = currentOrder.reduce((sum, { portion, quantity }) => sum + portion.price * quantity, 0);
-    const total = subtotal * 1.05; // subtotal + 5% tax
+    const total = currentOrder.reduce((sum, { portion, quantity }) => sum + portion.price * quantity, 0);
 
     const newOrder: Order = {
       id: `ORD${(Math.random() * 1000).toFixed(0).padStart(3, '0')}`,

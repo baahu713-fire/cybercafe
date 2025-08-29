@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from 'react-hook-form';
@@ -26,14 +27,20 @@ type FeedbackFormValues = z.infer<typeof feedbackSchema>;
 
 export default function FeedbackPage() {
     const { toast } = useToast();
-    const { currentUser, orders, submitFeedback } = useAppContext();
-    const [userOrders, setUserOrders] = useState<Order[]>([]);
+    const { currentUser, orders, submitFeedback, feedbacks } = useAppContext();
+    const [eligibleOrders, setEligibleOrders] = useState<Order[]>([]);
 
     useEffect(() => {
         if(currentUser) {
-            setUserOrders(orders.filter(o => o.userId === currentUser.id));
+            const submittedOrderIds = new Set(feedbacks.map(fb => fb.orderId));
+            const userDeliveredOrders = orders.filter(o => 
+                o.userId === currentUser.id && 
+                o.status === 'Delivered' &&
+                !submittedOrderIds.has(o.id)
+            );
+            setEligibleOrders(userDeliveredOrders);
         }
-    }, [currentUser, orders]);
+    }, [currentUser, orders, feedbacks]);
 
     const form = useForm<FeedbackFormValues>({
         resolver: zodResolver(feedbackSchema),
@@ -59,12 +66,12 @@ export default function FeedbackPage() {
         form.reset();
     };
 
-    if (!currentUser || currentUser.role === 'admin') {
+    if (!currentUser || currentUser.role !== 'customer') {
          return (
             <div className="text-center py-20">
-                <h1 className="text-2xl font-bold">{currentUser ? "Admins cannot leave feedback" : "Please Login"}</h1>
+                <h1 className="text-2xl font-bold">{currentUser ? "Only customers can leave feedback" : "Please Login"}</h1>
                 <p className="text-muted-foreground mb-4">
-                    {currentUser ? "Only customers can provide feedback." : "You need to be logged in to provide feedback."}
+                    {currentUser ? "Admins cannot provide feedback." : "You need to be logged in to provide feedback."}
                 </p>
                 {!currentUser && <Button asChild><Link href="/login">Login</Link></Button>}
             </div>
@@ -79,74 +86,79 @@ export default function FeedbackPage() {
                     <CardDescription>We'd love to hear from you. Please share your experience.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <FormField
-                                control={form.control}
-                                name="orderId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Select Order</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {eligibleOrders.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-10">
+                            <p>No orders eligible for feedback.</p>
+                            <p className="text-sm">You can only review orders that have been delivered.</p>
+                        </div>
+                    ) : (
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                <FormField
+                                    control={form.control}
+                                    name="orderId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Select Order</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a delivered order to review" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {eligibleOrders.map(order => (
+                                                        <SelectItem key={order.id} value={order.id}>
+                                                            Order #{order.id} - {new Date(order.orderDate).toLocaleDateString()}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="rating"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Rating</FormLabel>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select an order to review" />
-                                                </SelectTrigger>
+                                                <div className="flex items-center gap-1">
+                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                        <Star
+                                                            key={star}
+                                                            className={cn(
+                                                                "h-8 w-8 cursor-pointer transition-colors",
+                                                                field.value >= star ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"
+                                                            )}
+                                                            onClick={() => field.onChange(star)}
+                                                        />
+                                                    ))}
+                                                </div>
                                             </FormControl>
-                                            <SelectContent>
-                                                {userOrders.map(order => (
-                                                    <SelectItem key={order.id} value={order.id}>
-                                                        Order #{order.id} - {new Date(order.orderDate).toLocaleDateString()}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="rating"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Rating</FormLabel>
-                                        <FormControl>
-                                            <div className="flex items-center gap-1">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <Star
-                                                        key={star}
-                                                        className={cn(
-                                                            "h-8 w-8 cursor-pointer transition-colors",
-                                                            field.value >= star ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"
-                                                        )}
-                                                        onClick={() => field.onChange(star)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="comment"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Comment (Optional)</FormLabel>
-                                        <FormControl><Textarea placeholder="Tell us more about your experience..." className="min-h-[120px]" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <Button type="submit" className="w-full">Submit Feedback</Button>
-                        </form>
-                    </Form>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="comment"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Comment (Optional)</FormLabel>
+                                            <FormControl><Textarea placeholder="Tell us more about your experience..." className="min-h-[120px]" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Button type="submit" className="w-full">Submit Feedback</Button>
+                            </form>
+                        </Form>
+                    )}
                 </CardContent>
             </Card>
         </div>
     );
 }
-
-    
